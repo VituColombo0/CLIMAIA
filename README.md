@@ -10,7 +10,7 @@ Este projeto utiliza métodos de Deep Learning (como LSTMs) e algoritmos de Mach
 2. **Avaliação da Integridade dos Dados:** Validação do impacto de tratamentos de dados (interpolação e limpeza) comparando as marcações de eventos extremos entre a série bruta e a série tratada.
    - Os eventos são criados artificialmente devido à interpolação?
    - Os eventos extremos reais são suprimidos durante o tratamento?
-3. **Frontend Premium:** Uma interface clara, rápida e altamente estética para interação humana.
+3. **Software Premium:** Uma aplicação desktop clara, rápida e altamente estética para interação humana e visualização de resultados.
 
 ## 🏗️ Estrutura do Projeto (Planejada)
 
@@ -24,7 +24,7 @@ Este projeto utiliza métodos de Deep Learning (como LSTMs) e algoritmos de Mach
 │   ├── /statistical     # Scripts para os teoremas e baseline estatístico
 │   ├── /data_processing # Rotinas para ingestão e comparação dos dados
 │   └── /api             # Endpoints backend (caso aplicável)
-├── /web                 # Interface de usuário (Web App interativo)
+├── /app                 # Interface de usuário (Software Desktop interativo)
 │
 ├── lstm_only.py         # Código fornecido de Forecasting com LSTM
 ├── pv_forecasting.py    # Código fornecido de Forecasting PV com XGBoost

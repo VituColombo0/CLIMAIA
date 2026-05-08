@@ -37,9 +37,9 @@ O projeto será dividido em 6 fases principais:
     - "Alarme Falso: Evento Y criado pela interpolação"
     - Taxa de concordância geral.
 
-### Fase 5: Desenvolvimento de Interface Web
-- Desenvolver um frontend moderno e visualmente premium (Next.js/React ou dashboard robusto em Streamlit/Dash, conforme preferência).
-- Interface deve ter opções claras: "Fazer Previsão", "Comparar Bruto vs Tratado", "Dashboard de Eventos Extremos".
+### Fase 5: Desenvolvimento de Software Desktop
+- Desenvolver uma interface desktop moderna, bonita e premium (utilizando Python com bibliotecas modernas como CustomTkinter ou PyQt6).
+- A aplicação terá opções claras: "Fazer Previsão", "Comparar Bruto vs Tratado" e "Dashboard de Eventos Extremos".
 
 ### Fase 6: Automação e Deploy
 - Agendamento de inferência e validação contínua (ex: rodar scripts de forecasting diariamente).
