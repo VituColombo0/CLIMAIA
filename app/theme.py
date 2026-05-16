@@ -17,7 +17,7 @@ class Colors:
     PRIMARY        = "#6366f1"     # Indigo-500
     PRIMARY_HOVER  = "#818cf8"     # Indigo-400
     PRIMARY_DARK   = "#4f46e5"     # Indigo-600
-    PRIMARY_GLOW   = "#6366f120"   # Subtle glow
+    PRIMARY_GLOW   = "#1e1b4b"     # Subtle glow (solid dark indigo)
 
     SECONDARY      = "#06b6d4"     # Cyan-500
     SECONDARY_HOVER = "#22d3ee"    # Cyan-400
