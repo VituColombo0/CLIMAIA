@@ -47,3 +47,15 @@ O projeto será dividido em 6 fases principais:
 
 ## Log de Atividades
 * **08/05/2026:** Planejamento estrutural do projeto criado. Analisados os scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`). Criado o repositório inicial e `README.md`. Aguardando validação do plano pelo usuário.
+* **16/05/2026:** Desenvolvida a interface desktop completa do CLIMAIA usando CustomTkinter com dark mode premium. Estrutura criada:
+  - **Design System** (`app/theme.py`): Paleta de cores escura com tons indigo/cyan, tipografia e espaçamentos.
+  - **Componentes Reutilizáveis** (`app/components.py`): StatCard, NavItem, ActionButton, ConsoleBox, StatusBadge, LabeledEntry, LabeledOptionMenu.
+  - **Dashboard** (`app/pages/dashboard.py`): Cards de métricas, ações rápidas, status do sistema e console.
+  - **Gestão de Dados** (`app/pages/data_page.py`): Upload de CSV bruto/tratado, pré-visualização e resumo estatístico.
+  - **Análise** (`app/pages/analysis_page.py`): Seleção de período, método estatístico (EVT, Gumbel, Percentil, Z-Score, IQR), variáveis e granularidade.
+  - **Comparação** (`app/pages/comparison_page.py`): Cards de eventos criados/suprimidos, tabela de diagnóstico e área de gráficos.
+  - **Previsão IA** (`app/pages/forecast_page.py`): Seleção de modelo (LSTM/XGBoost/Ensemble), horizonte de previsão e confiança.
+  - **Configurações** (`app/pages/settings_page.py`): Tema, escala, configurações de CSV, exportação e informações do projeto.
+  - **Shell Principal** (`app/main_app.py`): Sidebar com navegação por ícones e roteamento de páginas.
+  - **Entry Point** (`main.py`): Ponto de entrada da aplicação.
+  - Virtual environment configurado com todas as dependências. Requer `python3-tk` no sistema.
