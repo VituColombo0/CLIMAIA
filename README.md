@@ -17,20 +17,18 @@ Este projeto utiliza métodos de Deep Learning (como LSTMs) e algoritmos de Mach
 ```
 /CLIMAIA
 │
-├── /data                # Base de dados (brutos e tratados)
-├── /docs                # Documentação do projeto (incluindo PROJECT_LOG.md)
-├── /src                 # Código Fonte Principal
-│   ├── /models          # Modelos de Machine Learning e Deep Learning
-│   ├── /statistical     # Scripts para os teoremas e baseline estatístico
-│   ├── /data_processing # Rotinas para ingestão e comparação dos dados
-│   └── /api             # Endpoints backend (caso aplicável)
-├── /app                 # Interface de usuário (Software Desktop interativo)
-│
+├── /data                # Base de dados (brutos e tratados) - Adicione os CSVs aqui!
+├── /app                 # Interface de usuário (Software Desktop interativo em CustomTkinter)
+│   ├── /pages           # Páginas principais (Dashboard, Data, Analysis, etc.)
+│   ├── components.py    # Componentes reutilizáveis (StatCards, Botões, Badges)
+│   ├── theme.py         # Design System (Cores, Tipografia, Espaçamentos)
+│   └── main_app.py      # Casca principal, roteamento e sidebar
+├── main.py              # Ponto de entrada do executável da aplicação
 ├── lstm_only.py         # Código fornecido de Forecasting com LSTM
 ├── pv_forecasting.py    # Código fornecido de Forecasting PV com XGBoost
 ├── PROJECT_LOG.md       # Acompanhamento do progresso de desenvolvimento
 ├── README.md            # Este arquivo
-└── requirements.txt     # Dependências de projeto (A criar)
+└── requirements.txt     # Dependências de projeto (pandas, customtkinter, matplotlib, etc)
 ```
 
 ## 🚀 Como Funciona
@@ -40,5 +38,10 @@ Este projeto utiliza métodos de Deep Learning (como LSTMs) e algoritmos de Mach
 3. **Motor de Comparação:** A IA compara a saída do aprendizado dos dados sem tratamento contra o set de dados tratados, emitindo um relatório analítico.
 
 ## 💡 Status do Projeto
-Em fase de **Estruturação e Planejamento**.
-Consulte o arquivo `PROJECT_LOG.md` para verificar o histórico e anotações técnicas do andamento atual.
+**Fase 1 (Arquitetura e Interface): CONCLUÍDA!** 
+O sistema desktop está completamente estruturado com navegação funcional, design system (Dark Mode Premium), e componentes prontos.
+
+**Fase 2 (Processamento e IA): PRÓXIMO PASSO.** 
+Aguardando o input dos arquivos de dados (CSVs) para injetar a lógica estatística (EVT, Gumbel) e o motor de Deep Learning nos botões da interface.
+
+Consulte o arquivo `PROJECT_LOG.md` para verificar o histórico detalhado e anotações técnicas do andamento atual.
