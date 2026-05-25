@@ -413,18 +413,93 @@ class AnalysisPage(ctk.CTkFrame):
             "timestamp": datetime.now().isoformat(),
         }
         self.app.app_state["analysis_config"] = config
-        self.app.app_state["analysis_ran"] = True
 
-        # ── Placeholder for statistical engine ────────────────────────────
-        self.console.log("")
-        self.console.log("⏳ O motor estatístico será implementado na Fase 2.")
-        self.console.log("   → Aguardando integração com scipy.stats (EVT, Gumbel, etc.)")
-        self.console.log("   → Quando implementado, os resultados aparecerão na aba 'Comparação'.")
-        self.console.log("━" * 50)
-        self.run_status.set_status("warning", "FASE 2 PENDENTE")
+        # ── Execute statistical engine ────────────────────────────────────
+        from src.statistical.extreme_detection import detect_extremes
+
+        results = {"raw": {}, "treated": {}}
+        
+        try:
+            # Helper to filter DataFrame by dates if columns exist
+            def filter_by_date(df_in):
+                df_out = df_in.copy()
+                date_col = self.app.app_state.get("csv_date_col", "Auto-detectar")
+                if date_col == "Auto-detectar":
+                    possible = [c for c in df_out.columns if any(
+                        x in c.lower() for x in ["date", "time", "timestamp", "data"])]
+                    if possible:
+                        date_col = possible[0]
+                
+                if date_col in df_out.columns:
+                    try:
+                        df_out[date_col] = pd.to_datetime(df_out[date_col], errors="coerce")
+                        start_str = self.date_start.get().strip()
+                        end_str = self.date_end.get().strip()
+                        if start_str:
+                            df_out = df_out[df_out[date_col] >= pd.to_datetime(start_str)]
+                        if end_str:
+                            df_out = df_out[df_out[date_col] <= pd.to_datetime(end_str)]
+                    except Exception as e:
+                        self.console.log(f"  ⚠️ Erro ao filtrar período por data: {e}")
+                return df_out
+
+            if want_raw:
+                self.console.log("\n⏳ Processando dados brutos...")
+                raw_df = filter_by_date(self.app.app_state["raw_df"])
+                results["raw"]["events"] = {}
+                results["raw"]["summary"] = {}
+                
+                for var in selected_vars:
+                    if var in raw_df.columns:
+                        mask = detect_extremes(raw_df, var, method, threshold_pct=threshold_val)
+                        results["raw"]["events"][var] = mask
+                        n_events = mask.sum()
+                        pct = (n_events / len(mask)) * 100 if len(mask) > 0 else 0
+                        results["raw"]["summary"][var] = {
+                            "count": int(n_events),
+                            "pct": float(pct),
+                            "mean": float(raw_df.loc[mask, var].mean()) if n_events > 0 else 0
+                        }
+                        self.console.log(f"  ✅ {var}: {n_events:,} eventos extremos detectados ({pct:.2f}%)")
+                    else:
+                        self.console.log(f"  ⚠️ Coluna '{var}' não encontrada no dataset bruto.")
+
+            if want_treated:
+                self.console.log("\n⏳ Processando dados tratados...")
+                treated_df = filter_by_date(self.app.app_state["treated_df"])
+                results["treated"]["events"] = {}
+                results["treated"]["summary"] = {}
+                
+                for var in selected_vars:
+                    if var in treated_df.columns:
+                        mask = detect_extremes(treated_df, var, method, threshold_pct=threshold_val)
+                        results["treated"]["events"][var] = mask
+                        n_events = mask.sum()
+                        pct = (n_events / len(mask)) * 100 if len(mask) > 0 else 0
+                        results["treated"]["summary"][var] = {
+                            "count": int(n_events),
+                            "pct": float(pct),
+                            "mean": float(treated_df.loc[mask, var].mean()) if n_events > 0 else 0
+                        }
+                        self.console.log(f"  ✅ {var}: {n_events:,} eventos extremos detectados ({pct:.2f}%)")
+                    else:
+                        self.console.log(f"  ⚠️ Coluna '{var}' não encontrada no dataset tratado.")
+
+            self.app.app_state["analysis_results"] = results
+            self.app.app_state["analysis_ran"] = True
+            
+            self.console.log("\n🎉 Análise concluída com sucesso! Os resultados podem ser visualizados na aba 'Comparação'.")
+            self.console.log("━" * 50)
+            self.run_status.set_status("ready", "CONCLUÍDA")
+
+        except Exception as e:
+            self.console.log(f"\n❌ ERRO durante a execução da análise: {e}")
+            self.console.log("━" * 50)
+            self.run_status.set_status("error", "FALHA")
+            self.app.app_state["analysis_ran"] = False
 
         # Log to app
-        self.app.log(f"Análise configurada: {method} | {len(selected_vars)} variáveis | Limiar {threshold_val}%")
+        self.app.log(f"Análise executada: {method} | {len(selected_vars)} variáveis | Limiar {threshold_val}%")
 
     def _clear_console(self):
         """Clear the analysis console."""

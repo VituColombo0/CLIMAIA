@@ -1,13 +1,15 @@
-"""
-CLIMAIA – Forecast Page
-AI-powered prediction interface for extreme climate events.
-"""
-
+import threading
+import numpy as np
+import pandas as pd
 import customtkinter as ctk
 from datetime import datetime
 from app.theme import Colors, Fonts, Spacing
 from app.components import (SectionHeader, ActionButton, LabeledEntry,
                              LabeledOptionMenu, ConsoleBox, StatusBadge)
+from src.models.forecaster import ClimaiaForecaster
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
 
 
 class ForecastPage(ctk.CTkFrame):
@@ -268,7 +270,7 @@ class ForecastPage(ctk.CTkFrame):
                 self.target_var.option.set(analyzed_vars[0])
 
     def _train_model(self):
-        """Train model — validates prerequisites and provides feedback."""
+        """Train model — validates prerequisites and runs training in a background thread."""
         if not self.app:
             return
 
@@ -302,49 +304,73 @@ class ForecastPage(ctk.CTkFrame):
             return
 
         model = self.model_select.get()
+        model_name = model.split(" (")[0]  # "LSTM", "XGBoost", "Ensemble"
 
-        # ── Training simulation ───────────────────────────────────────────
         self.model_badge.set_status("running", "TREINANDO...")
         self.console.log("━" * 50)
-        self.console.log(f"⚙️ Iniciando treinamento do modelo: {model}")
+        self.console.log(f"⚙️ Iniciando treinamento do modelo: {model_name}")
         self.console.log(f"  Épocas configuradas: {epochs}")
 
-        # Show data info
-        total_records = self.app.get_total_records()
-        self.console.log(f"  Registros disponíveis: {total_records:,}")
-
+        # Choose DataFrame (Treated preferred)
+        df = state.get("treated_df") if state.get("treated_df") is not None else state.get("raw_df")
+        target = self.target_var.get()
+        
+        # Get variable list
         config = state.get("analysis_config", {})
         variables = config.get("variables", [])
-        self.console.log(f"  Variáveis de entrada: {', '.join(variables)}")
+        
+        if target == "Todas":
+            target = variables[0] if variables else df.columns[1]  # Fallback
 
-        if "LSTM" in model or "Ensemble" in model:
-            self.console.log("  Arquitetura: LSTM (Long Short-Term Memory)")
-            self.console.log("  Framework: TensorFlow/Keras")
+        # Check date column
+        date_col = state.get("csv_date_col", "Auto-detectar")
+        if date_col == "Auto-detectar":
+            possible = [c for c in df.columns if any(x in c.lower() for x in ["date", "time", "timestamp", "data"])]
+            date_col = possible[0] if possible else None
 
-        if "XGBoost" in model or "Ensemble" in model:
-            self.console.log("  Arquitetura: XGBoost (Extreme Gradient Boosting)")
-            self.console.log("  Framework: xgboost")
+        # Start background training thread
+        threading.Thread(
+            target=self._run_training_thread,
+            args=(df, target, date_col, model_name, epochs),
+            daemon=True
+        ).start()
 
-        self.console.log("")
-        self.console.log("⏳ Motor de treinamento será implementado na Fase 3.")
-        self.console.log("   → Depende da integração com TensorFlow/Keras e XGBoost.")
-        self.console.log("   → Os scripts base (lstm_only.py, pv_forecasting.py) serão adaptados.")
-        self.console.log("━" * 50)
+    def _run_training_thread(self, df, target, date_col, model_name, epochs):
+        """Background thread execution for training."""
+        state = self.app.app_state
+        try:
+            forecaster = ClimaiaForecaster(model_type=model_name, epochs=epochs)
+            
+            # Simple wrapper to write logs to our console box safely from thread
+            def log_fn(msg):
+                self.app.root.after(0, lambda: self.console.log(msg))
 
-        # Save model state
-        model_name = model.split(" (")[0]  # "LSTM", "XGBoost", "Ensemble"
-        state["model_trained"] = True
-        state["model_type"] = model_name
-        self.model_badge.set_status("warning", f"FASE 3 ({model_name})")
-        self.check_labels["model"].configure(text="✅")
+            forecaster.train(df, target, date_col, log_fn)
 
-        # Update banner
-        self.prereq_icon.configure(text="✅")
-        self.prereq_text.configure(
-            text="Todos os pré-requisitos atendidos. Pronto para executar previsões.",
-            text_color=Colors.ACCENT_EMERALD)
+            # Update UI on main thread upon success
+            def on_success():
+                state["model_trained"] = True
+                state["model_type"] = model_name
+                state["forecaster"] = forecaster
+                state["forecast_target"] = target
+                state["forecast_date_col"] = date_col
+                
+                self.model_badge.set_status("ready", f"TREINADO ({model_name})")
+                self.check_labels["model"].configure(text="✅")
+                self.console.log(f"\n🎉 Modelo {model_name} treinado com sucesso para prever '{target}'!")
+                self.console.log("━" * 50)
+                
+                # Refresh page state
+                self._refresh_state()
 
-        self.app.log(f"Modelo {model_name} configurado para treinamento — aguardando Fase 3")
+            self.app.root.after(0, on_success)
+
+        except Exception as e:
+            def on_failure():
+                self.model_badge.set_status("error", "FALHA")
+                self.console.log(f"\n❌ ERRO durante o treinamento: {e}")
+                self.console.log("━" * 50)
+            self.app.root.after(0, on_failure)
 
     def _reset_model(self):
         """Reset model training state."""
@@ -353,10 +379,25 @@ class ForecastPage(ctk.CTkFrame):
 
         self.app.app_state["model_trained"] = False
         self.app.app_state["model_type"] = None
+        self.app.app_state["forecaster"] = None
+        self.app.app_state["forecast_target"] = None
         self.app.app_state["forecast_results"] = None
+        
         self.model_badge.set_status("idle", "NÃO TREINADO")
         self.check_labels["model"].configure(text="❌")
         self.forecast_status.set_status("idle", "AGUARDANDO")
+
+        # Restore results card placeholder
+        for widget in self.results_card.winfo_children():
+            widget.destroy()
+            
+        self.results_placeholder = ctk.CTkFrame(self.results_card, fg_color="transparent")
+        self.results_placeholder.place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(self.results_placeholder, text="🤖", font=(Fonts.FAMILY, 48),
+                     text_color=Colors.TEXT_DISABLED).pack()
+        ctk.CTkLabel(self.results_placeholder,
+                     text="Treine o modelo e execute uma previsão para ver os resultados",
+                     font=Fonts.BODY, text_color=Colors.TEXT_DISABLED).pack(pady=(Spacing.SM, 0))
 
         self.console.log("🔄 Estado do modelo resetado.")
         self.app.log("Estado do modelo de previsão resetado")
@@ -368,7 +409,7 @@ class ForecastPage(ctk.CTkFrame):
             text_color=Colors.TEXT_MUTED)
 
     def _run_forecast(self):
-        """Execute forecast — validates all prerequisites."""
+        """Execute forecast — validates all prerequisites and plots prediction."""
         if not self.app:
             return
 
@@ -380,7 +421,7 @@ class ForecastPage(ctk.CTkFrame):
             errors.append("Nenhum dado carregado")
         if not state.get("analysis_ran"):
             errors.append("Análise estatística não executada")
-        if not state.get("model_trained"):
+        if not state.get("model_trained") or "forecaster" not in state:
             errors.append("Modelo não treinado")
 
         if errors:
@@ -409,15 +450,17 @@ class ForecastPage(ctk.CTkFrame):
 
         # ── Execute forecast ──────────────────────────────────────────────
         horizon = self.horizon.get()
-        target = self.target_var.get()
+        target = state.get("forecast_target")
         model_type = state.get("model_type", "N/A")
+        date_col = state.get("forecast_date_col")
+        forecaster = state["forecaster"]
 
         self.forecast_status.set_status("running", "EXECUTANDO...")
         self.console.log("━" * 50)
         self.console.log("▶️ Iniciando previsão de eventos extremos...")
         self.console.log(f"  🧠 Modelo: {model_type}")
+        self.console.log(f"  Target: {target}")
         self.console.log(f"  ⏱️  Horizonte: {horizon}")
-        self.console.log(f"  🎯 Variável alvo: {target}")
         self.console.log(f"  📊 Confiança: {confidence_val}%")
 
         # Time horizon parsing
@@ -429,14 +472,97 @@ class ForecastPage(ctk.CTkFrame):
             "Próxima semana": 168,
         }
         hours = horizon_map.get(horizon, 24)
-        self.console.log(f"  Janela de previsão: {hours} horas")
+        
+        df = state.get("treated_df") if state.get("treated_df") is not None else state.get("raw_df")
 
-        self.console.log("")
-        self.console.log("⏳ Motor de previsão será implementado na Fase 3.")
-        self.console.log("   → Quando pronto, os gráficos de previsão aparecerão acima.")
-        self.console.log("   → Incluirá: intervalo de confiança, alertas de eventos e probabilidades.")
-        self.console.log("━" * 50)
+        try:
+            # Execute prediction
+            pred_df = forecaster.predict(df, target, date_col, hours, confidence_val)
+            state["forecast_results"] = pred_df
 
-        self.forecast_status.set_status("warning", "FASE 3 PENDENTE")
+            # Output stats
+            mean_pred = pred_df['Prediction'].mean()
+            max_pred = pred_df['Prediction'].max()
+            self.console.log(f"\n📊 Previsão gerada com sucesso:")
+            self.console.log(f"  - Pontos previstos: {len(pred_df)}")
+            self.console.log(f"  - Valor médio previsto: {mean_pred:.2f}")
+            self.console.log(f"  - Valor máximo previsto: {max_pred:.2f}")
+            
+            # Plot the prediction
+            self._plot_predictions(df, target, date_col, pred_df)
+            
+            self.forecast_status.set_status("ready", "CONCLUÍDA")
+            self.console.log("\n🎉 Previsão concluída! O gráfico de projeção foi renderizado acima.")
+            self.console.log("━" * 50)
 
-        self.app.log(f"Previsão configurada: {model_type} | {target} | {horizon} | {confidence_val}% confiança")
+        except Exception as e:
+            self.console.log(f"\n❌ ERRO durante a previsão: {e}")
+            self.console.log("━" * 50)
+            self.forecast_status.set_status("error", "FALHA")
+
+        self.app.log(f"Previsão executada: {model_type} | {target} | {horizon} | {confidence_val}% confiança")
+
+    def _plot_predictions(self, historical_df, target, date_col, pred_df):
+        """Render prediction line chart with confidence bands in self.results_card."""
+        for widget in self.results_card.winfo_children():
+            widget.destroy()
+
+        fig = Figure(figsize=(7, 3.2), facecolor=Colors.BG_CARD)
+        ax = fig.add_subplot(111)
+        ax.set_facecolor(Colors.BG_CARD)
+
+        # Plot historical data (last 50 points for context)
+        hist_size = min(50, len(historical_df))
+        hist_slice = historical_df.iloc[-hist_size:].copy()
+        
+        # Prepare historical index
+        if date_col and date_col in hist_slice.columns:
+            hist_x = pd.to_datetime(hist_slice[date_col])
+        else:
+            hist_x = np.arange(-hist_size, 0)
+            
+        hist_y = hist_slice[target].values
+
+        # Prepare forecast index
+        if date_col and date_col in historical_df.columns:
+            pred_x = pd.to_datetime(pred_df['Date'])
+        else:
+            pred_x = np.arange(0, len(pred_df))
+
+        # Helper to convert HEX colors to RGB
+        def hex_to_rgb(hex_str):
+            h = hex_str.lstrip('#')
+            return tuple(int(h[i:i+2], 16)/255.0 for i in (0, 2, 4))
+
+        color_hist = hex_to_rgb(Colors.TEXT_MUTED)
+        color_pred = hex_to_rgb(Colors.ACCENT_VIOLET)
+        
+        # Plot lines
+        ax.plot(hist_x, hist_y, color=color_hist, label='Histórico', linewidth=1.5, alpha=0.8)
+        ax.plot(pred_x, pred_df['Prediction'].values, color=color_pred, label='Previsão (IA)', linewidth=2.0)
+        
+        # Plot confidence intervals
+        ax.fill_between(pred_x, pred_df['Lower'].values, pred_df['Upper'].values, 
+                        color=color_pred, alpha=0.15, label='Intervalo de Confiança')
+
+        ax.set_title(f"Projeção Temporal de {target}", color=Colors.TEXT_PRIMARY, fontsize=10, pad=8)
+        ax.tick_params(colors=Colors.TEXT_MUTED, labelsize=8)
+        ax.grid(True, color=Colors.BORDER, linestyle='--', alpha=0.3)
+        
+        # Format labels nicely if they are datetimes
+        if date_col and date_col in historical_df.columns:
+            fig.autofmt_xdate()
+            
+        for spine in ax.spines.values():
+            spine.set_color(Colors.BORDER)
+            spine.set_alpha(0.5)
+
+        leg = ax.legend(facecolor=Colors.BG_DARKEST, edgecolor=Colors.BORDER, labelcolor=Colors.TEXT_SECONDARY, fontsize=8)
+        leg.get_frame().set_alpha(0.8)
+
+        fig.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=self.results_card)
+        canvas.draw()
+        canvas.get_tkwidget().pack(fill="both", expand=True, padx=Spacing.MD, pady=Spacing.MD)
+

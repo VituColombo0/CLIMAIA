@@ -177,23 +177,36 @@ class ComparisonPage(ctk.CTkFrame):
         self.console.pack(fill="x")
 
     def _build_placeholder_rows(self):
-        """Build placeholder rows in the comparison table."""
+        """Build rows in the comparison table based on current state or results."""
         for widget in self.table_frame.winfo_children():
             widget.destroy()
 
-        vars_to_show = []
-        if self.app and self.app.app_state.get("analysis_config"):
-            vars_to_show = self.app.app_state["analysis_config"].get("variables", [])
+        state = self.app.app_state if self.app else {}
+        comp_results = state.get("comparison_results")
+        config = state.get("analysis_config", {})
+        vars_to_show = config.get("variables", [])
 
         if not vars_to_show:
             vars_to_show = ["Velocidade do Vento", "Temperatura", "Radiação Solar"]
 
         for var in vars_to_show:
-            row = ctk.CTkFrame(self.table_frame, fg_color="transparent",
-                               height=36)
+            row = ctk.CTkFrame(self.table_frame, fg_color="transparent", height=36)
             row.pack(fill="x")
 
-            vals = [var, "—", "—", "—", "—", "—", "—"]
+            if comp_results and var in comp_results:
+                r = comp_results[var]
+                vals = [
+                    var,
+                    f"{r['total_raw']:,}",
+                    f"{r['total_treated']:,}",
+                    f"{r['coincident']:,}",
+                    f"{r['created']:,}",
+                    f"{r['suppressed']:,}",
+                    f"{r['agreement_pct']:.1f}%"
+                ]
+            else:
+                vals = [var, "—", "—", "—", "—", "—", "—"]
+
             for val in vals:
                 ctk.CTkLabel(row, text=val, font=Fonts.SMALL,
                              text_color=Colors.TEXT_SECONDARY,
@@ -241,12 +254,102 @@ class ComparisonPage(ctk.CTkFrame):
                 text="Pré-requisitos pendentes:",
                 text_color=Colors.ACCENT_WARM)
 
-        # Update table with analysis variables
+        # Update table with analysis variables or comparison results
         self._build_placeholder_rows()
 
-        # If comparison was already run, show status
-        if state.get("comparison_ran"):
+        # If comparison was already run, show stats and chart
+        if state.get("comparison_ran") and state.get("comparison_results"):
             self.comparison_status.set_status("ready", "CONCLUÍDA")
+            self._update_stats_cards(state["comparison_results"])
+            self._update_chart(state["comparison_results"])
+        else:
+            self._reset_stats_cards()
+
+    def _reset_stats_cards(self):
+        self.card_total_raw.set_value("—")
+        self.card_total_treated.set_value("—")
+        self.card_created.set_value("—")
+        self.card_suppressed.set_value("—")
+
+    def _update_stats_cards(self, results):
+        """Update stat cards with aggregated metrics from results."""
+        if not results:
+            self._reset_stats_cards()
+            return
+        
+        tot_raw = sum(r["total_raw"] for r in results.values())
+        tot_treated = sum(r["total_treated"] for r in results.values())
+        tot_created = sum(r["created"] for r in results.values())
+        tot_suppressed = sum(r["suppressed"] for r in results.values())
+        
+        self.card_total_raw.set_value(f"{tot_raw:,}")
+        self.card_total_treated.set_value(f"{tot_treated:,}")
+        self.card_created.set_value(f"{tot_created:,}")
+        self.card_suppressed.set_value(f"{tot_suppressed:,}")
+
+    def _update_chart(self, results):
+        """Embed a beautiful Matplotlib comparison chart."""
+        # Clear existing widgets in the chart card
+        for widget in self.chart_card.winfo_children():
+            widget.destroy()
+
+        if not results:
+            # Fallback placeholder
+            placeholder = ctk.CTkFrame(self.chart_card, fg_color="transparent")
+            placeholder.place(relx=0.5, rely=0.5, anchor="center")
+            ctk.CTkLabel(placeholder, text="📊", font=(Fonts.FAMILY, 48),
+                         text_color=Colors.TEXT_DISABLED).pack()
+            ctk.CTkLabel(placeholder, text="Sem dados de comparação para exibir",
+                         font=Fonts.BODY, text_color=Colors.TEXT_DISABLED).pack(pady=(Spacing.SM, 0))
+            return
+
+        # Prepare data for matplotlib
+        vars_list = list(results.keys())
+        raw_events = [results[v]["total_raw"] for v in vars_list]
+        treated_events = [results[v]["total_treated"] for v in vars_list]
+        coincident = [results[v]["coincident"] for v in vars_list]
+
+        fig = Figure(figsize=(7, 2.8), facecolor=Colors.BG_CARD)
+        ax = fig.add_subplot(111)
+        ax.set_facecolor(Colors.BG_CARD)
+
+        x = np.arange(len(vars_list))
+        width = 0.25
+
+        # Hex to RGB normalizado para matplotlib
+        def hex_to_rgb(hex_str):
+            h = hex_str.lstrip('#')
+            return tuple(int(h[i:i+2], 16)/255.0 for i in (0, 2, 4))
+
+        color_raw = hex_to_rgb(Colors.PRIMARY)
+        color_treated = hex_to_rgb(Colors.SECONDARY)
+        color_coin = hex_to_rgb(Colors.ACCENT_EMERALD)
+
+        ax.bar(x - width, raw_events, width, label='Eventos Brutos', color=color_raw, edgecolor='none')
+        ax.bar(x, treated_events, width, label='Eventos Tratados', color=color_treated, edgecolor='none')
+        ax.bar(x + width, coincident, width, label='Coincidentes', color=color_coin, edgecolor='none')
+
+        ax.set_title("Comparação de Eventos Extremos Detectados", color=Colors.TEXT_PRIMARY, fontsize=10, pad=8)
+        ax.set_xticks(x)
+        # Truncate long variable names for x-axis readability
+        ax.set_xticklabels([v[:15] + "..." if len(v) > 15 else v for v in vars_list], color=Colors.TEXT_SECONDARY, fontsize=8)
+        ax.tick_params(colors=Colors.TEXT_MUTED, labelsize=8)
+        ax.grid(True, color=Colors.BORDER, linestyle='--', alpha=0.3, axis='y')
+        
+        # Style spines
+        for spine in ax.spines.values():
+            spine.set_color(Colors.BORDER)
+            spine.set_alpha(0.5)
+
+        # Legend with matching colors
+        leg = ax.legend(facecolor=Colors.BG_DARKEST, edgecolor=Colors.BORDER, labelcolor=Colors.TEXT_SECONDARY, fontsize=8)
+        leg.get_frame().set_alpha(0.8)
+
+        fig.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=self.chart_card)
+        canvas.draw()
+        canvas.get_tkwidget().pack(fill="both", expand=True, padx=Spacing.MD, pady=Spacing.MD)
 
     def _run_comparison(self):
         """Execute comparison — validates all prerequisites first."""
@@ -261,7 +364,7 @@ class ComparisonPage(ctk.CTkFrame):
             errors.append("Dados Brutos não carregados")
         if state.get("treated_df") is None:
             errors.append("Dados Tratados não carregados")
-        if not state.get("analysis_ran"):
+        if not state.get("analysis_ran") or "analysis_results" not in state:
             errors.append("Análise estatística não executada")
 
         if errors:
@@ -287,44 +390,55 @@ class ComparisonPage(ctk.CTkFrame):
         self.comparison_status.set_status("running", "EXECUTANDO...")
         self.console.log("━" * 50)
         self.console.log("🔄 Iniciando comparação Bruto vs Tratado...")
-        self.console.log(f"  Método utilizado: {method}")
-        self.console.log(f"  Variáveis: {', '.join(variables)}")
+        self.console.log(f"  Método de análise: {method}")
+        self.console.log(f"  Variáveis avaliadas: {', '.join(variables)}")
 
-        raw_df = state["raw_df"]
-        treated_df = state["treated_df"]
-        self.console.log(f"  Dataset Bruto: {len(raw_df):,} registros")
-        self.console.log(f"  Dataset Tratado: {len(treated_df):,} registros")
+        from src.statistical.comparison import compare_event_masks
 
-        # Shape comparison
-        if raw_df.shape != treated_df.shape:
-            self.console.log(f"  ⚠️ Dimensões diferentes: Bruto {raw_df.shape} vs Tratado {treated_df.shape}")
-        else:
-            self.console.log(f"  ✅ Dimensões iguais: {raw_df.shape}")
+        comp_results = {}
+        analysis_res = state["analysis_results"]
 
-        # Column comparison
-        raw_cols = set(raw_df.columns)
-        treated_cols = set(treated_df.columns)
-        common_cols = raw_cols & treated_cols
-        only_raw = raw_cols - treated_cols
-        only_treated = treated_cols - raw_cols
+        try:
+            for var in variables:
+                raw_exists = "raw" in analysis_res and "events" in analysis_res["raw"] and var in analysis_res["raw"]["events"]
+                treated_exists = "treated" in analysis_res and "events" in analysis_res["treated"] and var in analysis_res["treated"]["events"]
+                
+                if raw_exists and treated_exists:
+                    raw_mask = analysis_res["raw"]["events"][var]
+                    treated_mask = analysis_res["treated"]["events"][var]
+                    
+                    metrics = compare_event_masks(raw_mask, treated_mask)
+                    comp_results[var] = metrics
+                    
+                    self.console.log(f"\n📈 Resultados para: {var}")
+                    self.console.log(f"  - Eventos Brutos: {metrics['total_raw']:,}")
+                    self.console.log(f"  - Eventos Tratados: {metrics['total_treated']:,}")
+                    self.console.log(f"  - Coincidentes: {metrics['coincident']:,}")
+                    self.console.log(f"  - Criados pelo Tratamento: {metrics['created']:,}")
+                    self.console.log(f"  - Suprimidos pelo Tratamento: {metrics['suppressed']:,}")
+                    self.console.log(f"  - Taxa de Concordância (Jaccard): {metrics['agreement_pct']:.2f}%")
+                else:
+                    self.console.log(f"\n⚠️ Não foi possível comparar '{var}': dados ausentes em um dos datasets.")
 
-        self.console.log(f"  Colunas em comum: {len(common_cols)}")
-        if only_raw:
-            self.console.log(f"  ⚠️ Apenas no Bruto: {', '.join(sorted(only_raw))}")
-        if only_treated:
-            self.console.log(f"  ⚠️ Apenas no Tratado: {', '.join(sorted(only_treated))}")
+            state["comparison_results"] = comp_results
+            state["comparison_ran"] = True
+            
+            # Update UI views
+            self._update_stats_cards(comp_results)
+            self._build_placeholder_rows()
+            self._update_chart(comp_results)
+            
+            self.console.log("\n🎉 Comparação finalizada com sucesso!")
+            self.console.log("━" * 50)
+            self.comparison_status.set_status("ready", "CONCLUÍDA")
 
-        self.console.log("")
-        self.console.log("⏳ Motor de comparação de eventos será implementado na Fase 2.")
-        self.console.log("   → Depende da implementação do motor estatístico na aba 'Análise'.")
-        self.console.log("   → Quando pronto, esta aba exibirá: eventos suprimidos, criados e taxa de concordância.")
-        self.console.log("━" * 50)
+        except Exception as e:
+            self.console.log(f"\n❌ ERRO durante a comparação: {e}")
+            self.console.log("━" * 50)
+            self.comparison_status.set_status("error", "FALHA")
+            state["comparison_ran"] = False
 
-        # Mark as run
-        state["comparison_ran"] = True
-        self.comparison_status.set_status("warning", "FASE 2 PENDENTE")
-
-        self.app.log("Comparação Bruto vs Tratado configurada — aguardando motor estatístico (Fase 2)")
+        self.app.log(f"Comparação executada para {len(variables)} variáveis.")
 
     def _export_report(self):
         """Export comparison report as a text file."""
@@ -332,8 +446,9 @@ class ComparisonPage(ctk.CTkFrame):
             return
 
         state = self.app.app_state
+        comp_results = state.get("comparison_results")
 
-        if not state.get("comparison_ran"):
+        if not state.get("comparison_ran") or not comp_results:
             self.console.log("❌ Execute a comparação antes de exportar o relatório.")
             return
 
@@ -357,23 +472,41 @@ class ComparisonPage(ctk.CTkFrame):
                 f.write("=" * 60 + "\n")
                 f.write("CLIMAIA - Relatório de Comparação Bruto vs Tratado\n")
                 f.write("=" * 60 + "\n\n")
-                f.write(f"Data: {__import__('datetime').datetime.now().strftime('%d/%m/%Y %H:%M')}\n")
-                f.write(f"Método: {config.get('method', 'N/A')}\n")
-                f.write(f"Limiar: {config.get('threshold', 'N/A')}%\n")
-                f.write(f"Variáveis: {', '.join(config.get('variables', []))}\n\n")
+                f.write(f"Data de Geração: {__import__('datetime').datetime.now().strftime('%d/%m/%Y %H:%M')}\n")
+                f.write(f"Método Analítico: {config.get('method', 'N/A')}\n")
+                f.write(f"Limiar de Sensibilidade: {config.get('threshold', 'N/A')}%\n")
+                f.write(f"Granularidade: {config.get('granularity', 'N/A')}\n")
+                f.write(f"Período Selecionado: {config.get('period', 'N/A')}\n\n")
 
-                # Data summary
-                raw_df = state.get("raw_df")
-                treated_df = state.get("treated_df")
-                if raw_df is not None:
-                    f.write(f"Dataset Bruto: {len(raw_df):,} registros, {len(raw_df.columns)} colunas\n")
-                if treated_df is not None:
-                    f.write(f"Dataset Tratado: {len(treated_df):,} registros, {len(treated_df.columns)} colunas\n")
+                # General counts
+                f.write("-" * 40 + "\n")
+                f.write("Resumo Geral da Análise\n")
+                f.write("-" * 40 + "\n")
+                tot_raw = sum(r["total_raw"] for r in comp_results.values())
+                tot_treated = sum(r["total_treated"] for r in comp_results.values())
+                tot_created = sum(r["created"] for r in comp_results.values())
+                tot_suppressed = sum(r["suppressed"] for r in comp_results.values())
+                
+                f.write(f"Total de Eventos Brutos: {tot_raw:,}\n")
+                f.write(f"Total de Eventos Tratados: {tot_treated:,}\n")
+                f.write(f"Total de Eventos Criados: {tot_created:,}\n")
+                f.write(f"Total de Eventos Suprimidos: {tot_suppressed:,}\n\n")
 
+                # Variable detail
+                f.write("-" * 40 + "\n")
+                f.write("Detalhes por Variável\n")
+                f.write("-" * 40 + "\n")
+                for var, r in comp_results.items():
+                    f.write(f"\nVariável: {var}\n")
+                    f.write(f"  - Eventos Brutos: {r['total_raw']:,}\n")
+                    f.write(f"  - Eventos Tratados: {r['total_treated']:,}\n")
+                    f.write(f"  - Coincidentes: {r['coincident']:,}\n")
+                    f.write(f"  - Criados (Falsos Alarmes): {r['created']:,}\n")
+                    f.write(f"  - Suprimidos (Perdidos): {r['suppressed']:,}\n")
+                    f.write(f"  - Índice de Concordância: {r['agreement_pct']:.2f}%\n")
+                
                 f.write("\n" + "=" * 60 + "\n")
-                f.write("NOTA: Motor de comparação será implementado na Fase 2.\n")
-                f.write("Este relatório será preenchido com os resultados da detecção\n")
-                f.write("de eventos extremos quando o motor estatístico estiver ativo.\n")
+                f.write("Relatório gerado automaticamente pelo CLIMAIA.\n")
                 f.write("=" * 60 + "\n")
 
             self.console.log(f"✅ Relatório exportado: {os.path.basename(filepath)}")
@@ -382,3 +515,4 @@ class ComparisonPage(ctk.CTkFrame):
         except Exception as e:
             self.console.log(f"❌ Erro ao exportar: {e}")
             messagebox.showerror("Erro ao Exportar", f"Não foi possível salvar o relatório:\n{e}")
+

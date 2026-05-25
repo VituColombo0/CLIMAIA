@@ -97,68 +97,49 @@ python main.py
 ### 📌 08/05/2026 — Planejamento e Estruturação Inicial
 > **Fase 0 — Fundação**
 
-- Definição da arquitetura e escopo do projeto
-- Análise dos scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`)
-- Criação do repositório GitHub, `README.md` e `PROJECT_LOG.md`
-- Definição das 6 fases do projeto (Ingestão → Estatística → IA → Comparação → Software → Deploy)
-- Escolha da stack: Python + CustomTkinter (Desktop), Pandas, NumPy, Matplotlib, TensorFlow/Keras, XGBoost
+- Definição da arquitetura e escopo do projeto.
+- Análise dos scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`).
+- Criação do repositório GitHub, `README.md` e `PROJECT_LOG.md`.
+- Definição das fases do projeto (Ingestão → Estatística → IA → Comparação → Software → Deploy).
 
 ---
 
 ### 🎨 16/05/2026 — Interface Desktop Completa
 > **Fase 1A — Construção da UI**
 
-- **Design System** (`theme.py`): Paleta dark mode premium (Indigo/Cyan), tipografia Segoe UI escalada, espaçamentos padronizados
-- **Componentes** (`components.py`): StatCard, NavItem, ActionButton, ConsoleBox, StatusBadge, LabeledEntry, LabeledOptionMenu
-- **6 Páginas** construídas com layout profissional:
-  - 🏠 Dashboard com cards de métricas e console
-  - 📁 Gestão de Dados com upload duplo (bruto/tratado) e preview
-  - 🔬 Análise com seleção de método estatístico e variáveis
-  - 📊 Comparação com tabela de diagnóstico e área de gráficos
-  - 🤖 Previsão IA com seleção de modelo e horizonte
-  - ⚙️ Configurações com tema, escala e exportação
-- **Shell Principal** (`main_app.py`): Sidebar com navegação, roteamento dinâmico de páginas
-- Ambiente virtual configurado com todas as dependências
+- **Design System** (`theme.py`): Paleta dark mode premium, tipografia e espaçamentos padronizados.
+- **Componentes** (`components.py`): StatCards, ActionButtons, ConsoleBox, StatusBadges reativos.
+- **Estruturação de Telas**: 6 abas principais integradas no painel lateral.
 
 ---
 
-### ⚡ 25/05/2026 — Botões Funcionais e Estado Centralizado
-> **Fase 1B — Lógica da Interface**
+### ⚡ 25/05/2026 — Lógica Operacional e Motores de IA / Estatística
+> **Fases 1B a 5 — Lógica, IA e Visualização**
 
-- **Estado centralizado** (`app_state`): Dados, análise, comparação, modelo e configurações compartilhados entre todas as abas
-- **Sistema de log cross-page**: Mensagens persistem e são replayed no Dashboard
-- **Dashboard reativo**: Stats, badges de status e console atualizam automaticamente ao navegar
-- **Data Page inteligente**: Leitura de CSV respeita separator/encoding das Configurações. Restaura estado ao revisitar. Invalida análise/comparação ao trocar dados
-- **Análise com detecção automática**: Variáveis numéricas do CSV detectadas automaticamente. Validação completa de todos os campos. Período auto-detecta range de datas
-- **Comparação com pré-requisitos**: Checklist visual (✅/❌). Validação antes de executar. Exportação de relatório via file dialog
-- **Previsão com fluxo completo**: Checklist de pré-requisitos, config de épocas, reset do modelo, dropdown dinâmico de variáveis, validação de confiança
-- **Configurações persistentes**: Exportação funcional (CSV/Excel/JSON/Parquet). "Limpar Dados" e "Resetar Tudo" com confirmação. Log de alterações
-
----
-
-### 🔮 Próximas Etapas
-
-| Fase | Descrição | Status |
-|------|-----------|--------|
-| **Fase 2** | Motor estatístico (EVT, Gumbel, Z-Score, Percentil, IQR) | ⏳ Próximo |
-| **Fase 3** | Modelo de IA (LSTM + XGBoost) e treinamento | 📋 Planejado |
-| **Fase 4** | Comparador analítico Bruto vs Tratado | 📋 Planejado |
-| **Fase 5** | Gráficos matplotlib integrados na interface | 📋 Planejado |
-| **Fase 6** | Automação, alertas e deploy | 📋 Planejado |
+- **Estado Centralizado** (`app_state`): Gerenciamento síncrono e integrado de fluxos entre páginas.
+- **Motor Estatístico Real** (`src/statistical/evt.py`): Detecção real de eventos por EVT (Gumbel), Z-Score, IQR e Percentil.
+- **Gráficos com Matplotlib**: Integração de gráficos reativos nas abas de Análise, Comparação e Previsão.
+- **Motor de Previsão por IA** (`src/models/forecaster.py`):
+  - Modelagem real com **LSTM**, **XGBoost** e **Ensemble** (LSTM + XGBoost).
+  - Treinamento assíncrono em segundo plano (background threading) com logs em tempo real na interface gráfica para evitar congelamentos.
+  - Previsão recursiva multi-step com cálculo dinâmico de bandas de incerteza (intervalos de confiança).
+- **Validação de Prerrequisitos**: Checklist dinâmico com feedbacks visuais na UI.
 
 ---
 
 ## 💡 Status Atual
 
-```
-Fase 1 (UI + Botões Funcionais): ██████████████████████████████ 100% ✅
-Fase 2 (Motor Estatístico):      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% ⏳
-Fase 3 (Modelo IA):              ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% 📋
+```text
+Fase 1 (Interface e Lógica de Fluxo):  ██████████████████████████████ 100% ✅
+Fase 2 (Motor Estatístico de Eventos): ██████████████████████████████ 100% ✅
+Fase 3 (Motor de Previsão LSTM/XGBoost):██████████████████████████████ 100% ✅
+Fase 4 (Comparador Bruto vs Tratado):  ██████████████████████████████ 100% ✅
+Fase 5 (Visualização Matplotlib):      ██████████████████████████████ 100% ✅
+Fase 6 (Ajustes Finais e Validação):   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% ⏳
 ```
 
-> **Aguardando:** Input dos arquivos CSV para iniciar a Fase 2 (implementação do motor estatístico e gráficos).
+Consulte o arquivo `PROJECT_LOG.md` para o histórico técnico detalhado do desenvolvimento.
 
-Consulte o arquivo `PROJECT_LOG.md` para o histórico técnico detalhado.
 
 ---
 
