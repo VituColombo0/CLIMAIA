@@ -143,8 +143,22 @@ Consulte o arquivo `PROJECT_LOG.md` para o histórico técnico detalhado do dese
 
 ---
 
+## 🪟 Executável para Windows (.exe)
+
+O software já está preparado para ser compilado como um aplicativo nativo do Windows.
+
+Para gerar o arquivo `.exe` contendo toda a interface e os modelos de IA embutidos, basta seguir os passos em um computador com **Windows**:
+1. Tenha o **Python** instalado na sua máquina Windows.
+2. Abra a pasta do projeto.
+3. Dê dois cliques no arquivo `build_windows.bat`.
+
+O script irá automaticamente instalar as dependências e empacotar o projeto. Ao final, o seu executável estará disponível dentro da pasta `dist/` com o nome `CLIMAIA.exe`.
+
+---
+
 ## 👤 Autor
 
 **Victor Vieira Colombo**  
 Repositório: [github.com/VituColombo0/CLIMAIA](https://github.com/VituColombo0/CLIMAIA)  
 Licença: Privado
+

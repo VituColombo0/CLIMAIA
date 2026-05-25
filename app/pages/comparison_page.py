@@ -5,7 +5,10 @@ Side-by-side comparison of extreme event detection between raw and treated data.
 
 import os
 import customtkinter as ctk
+import numpy as np
 from tkinter import filedialog, messagebox
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from app.theme import Colors, Fonts, Spacing
 from app.components import SectionHeader, ActionButton, StatCard, ConsoleBox, StatusBadge
 
