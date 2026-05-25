@@ -59,3 +59,12 @@ O projeto será dividido em 6 fases principais:
   - **Shell Principal** (`app/main_app.py`): Sidebar com navegação por ícones e roteamento de páginas.
   - **Entry Point** (`main.py`): Ponto de entrada da aplicação.
   - Virtual environment configurado com todas as dependências. Requer `python3-tk` no sistema.
+* **25/05/2026:** Implementação funcional completa de todos os botões e fluxos da interface:
+  - **`main_app.py`:** Estado centralizado (`app_state`) com settings, log cross-page, helpers (`has_data`, `get_numeric_columns`, `get_csv_read_kwargs`, etc.).
+  - **Dashboard reativo:** Atualiza stats, badges de status e console automaticamente ao navegar. Replays últimas 20 mensagens do log global.
+  - **Data Page:** Leitura de CSV respeita configurações de separator/encoding da aba Settings. Restaura estado ao revisitar. Invalida análise/comparação ao trocar dados.
+  - **Analysis Page:** Banner de status de dados dinâmico. Detecção automática de variáveis numéricas do CSV. Validação completa (dados, variáveis, limiar). Período auto-detecta range de datas.
+  - **Comparison Page:** Checklist visual de pré-requisitos (dados + análise). Validação antes de executar. Exportação de relatório via file dialog. Análise de colunas em comum entre datasets.
+  - **Forecast Page:** Checklist de pré-requisitos (dados + análise + modelo). Config de épocas. Botão de reset do modelo. Dropdown de variável alvo dinâmico da análise. Validação de confiança.
+  - **Settings Page:** Todas as configurações persistem em `app_state`. Exportação funcional com CSV/Excel/JSON/Parquet via file save dialog. Botões "Limpar Dados" e "Resetar Tudo" com confirmação. Log de alterações.
+  - **Status:** Fase 1 (UI + Botões Funcionais) 100% Concluída. Aguardando dados e Fase 2 (Motor Estatístico).

@@ -15,6 +15,7 @@ class DashboardPage(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.app = app_ref
         self._build_ui()
+        self._refresh_state()
 
     def _build_ui(self):
         # ── Scrollable container ──────────────────────────────────────────
@@ -45,10 +46,10 @@ class DashboardPage(ctk.CTkFrame):
         self.card_datasets.grid(row=0, column=0, padx=(0, Spacing.MD),
                                  sticky="nsew")
 
-        self.card_events = StatCard(
-            cards_frame, icon="⚡", label="Eventos Detectados",
+        self.card_records = StatCard(
+            cards_frame, icon="📊", label="Total de Registros",
             value="0", accent=Colors.ACCENT_WARM)
-        self.card_events.grid(row=0, column=1, padx=(0, Spacing.MD),
+        self.card_records.grid(row=0, column=1, padx=(0, Spacing.MD),
                                sticky="nsew")
 
         self.card_accuracy = StatCard(
@@ -122,19 +123,93 @@ class DashboardPage(ctk.CTkFrame):
 
         self.console = ConsoleBox(scroll, height=150)
         self.console.pack(fill="x")
-        self.console.log("CLIMAIA v1.0 inicializado com sucesso.")
-        self.console.log("Aguardando carregamento de dados...")
 
     def _nav(self, page: str):
         if self.app:
             self.app.navigate(page)
+
+    def _refresh_state(self):
+        """Refresh all dashboard elements from the current app state."""
+        if not self.app:
+            self.console.log("CLIMAIA v1.0 inicializado com sucesso.")
+            self.console.log("Aguardando carregamento de dados...")
+            return
+
+        state = self.app.app_state
+
+        # ── Update stat cards ─────────────────────────────────────────────
+        dataset_count = self.app.count_loaded_datasets()
+        self.card_datasets.set_value(str(dataset_count))
+
+        total_records = self.app.get_total_records()
+        self.card_records.set_value(f"{total_records:,}" if total_records > 0 else "0")
+
+        # Accuracy from comparison
+        if state.get("comparison_ran") and state.get("comparison_results"):
+            results = state["comparison_results"]
+            acc = results.get("overall_agreement")
+            if acc is not None:
+                self.card_accuracy.set_value(f"{acc:.1f}%")
+
+        # Model status
+        if state.get("model_trained"):
+            model_type = state.get("model_type", "IA")
+            self.card_model.set_value(f"✅ {model_type}")
+        else:
+            self.card_model.set_value("Offline")
+
+        # ── Update status badges ──────────────────────────────────────────
+        # Raw data status
+        if state.get("raw_df") is not None:
+            raw_rows = len(state["raw_df"])
+            self.status_badges["Dados Brutos"].set_status(
+                "ready", f"CARREGADO ({raw_rows:,} linhas)")
+        else:
+            self.status_badges["Dados Brutos"].set_status("idle", "NÃO CARREGADOS")
+
+        # Treated data status
+        if state.get("treated_df") is not None:
+            treated_rows = len(state["treated_df"])
+            self.status_badges["Dados Tratados"].set_status(
+                "ready", f"CARREGADO ({treated_rows:,} linhas)")
+        else:
+            self.status_badges["Dados Tratados"].set_status("idle", "NÃO CARREGADOS")
+
+        # Analysis engine status
+        if state.get("analysis_ran"):
+            self.status_badges["Motor Estatístico (EVT/Gumbel)"].set_status(
+                "ready", "ANÁLISE CONCLUÍDA")
+        else:
+            self.status_badges["Motor Estatístico (EVT/Gumbel)"].set_status(
+                "idle", "AGUARDANDO")
+
+        # Model statuses
+        if state.get("model_trained"):
+            model = state.get("model_type", "")
+            if "LSTM" in model or "Ensemble" in model:
+                self.status_badges["Modelo LSTM"].set_status("ready", "TREINADO")
+            if "XGBoost" in model or "Ensemble" in model:
+                self.status_badges["Modelo XGBoost"].set_status("ready", "TREINADO")
+        else:
+            self.status_badges["Modelo LSTM"].set_status("idle", "NÃO TREINADO")
+            self.status_badges["Modelo XGBoost"].set_status("idle", "NÃO TREINADO")
+
+        # ── Replay log messages ───────────────────────────────────────────
+        log_messages = self.app.get_log_messages()
+        if log_messages:
+            # Show the last 20 messages
+            for msg in log_messages[-20:]:
+                self.console.log(msg)
+        else:
+            self.console.log("CLIMAIA v1.0 inicializado com sucesso.")
+            self.console.log("Aguardando carregamento de dados...")
 
     def update_stats(self, datasets=None, events=None, accuracy=None,
                      model_status=None):
         if datasets is not None:
             self.card_datasets.set_value(str(datasets))
         if events is not None:
-            self.card_events.set_value(str(events))
+            self.card_records.set_value(str(events))
         if accuracy is not None:
             self.card_accuracy.set_value(f"{accuracy:.1f}%")
         if model_status is not None:

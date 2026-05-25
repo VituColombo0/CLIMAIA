@@ -4,6 +4,7 @@ Sidebar navigation + page router for the desktop application.
 """
 
 import customtkinter as ctk
+from datetime import datetime
 from app.theme import Colors, Fonts, Spacing
 from app.components import NavItem
 from app.pages.dashboard import DashboardPage
@@ -44,18 +45,44 @@ class CLIMAIAApp(ctk.CTk):
         self.configure(fg_color=Colors.BG_DARK)
 
         # ── Shared application state ──────────────────────────────────────
-        self.state = {
+        self.app_state = {
+            # Data
             "raw_df": None,
             "treated_df": None,
             "raw_path": None,
             "treated_path": None,
+            "raw_columns": [],
+            "treated_columns": [],
+
+            # Analysis results
             "analysis_results": None,
+            "analysis_ran": False,
+            "analysis_config": None,
+
+            # Comparison results
             "comparison_results": None,
+            "comparison_ran": False,
+
+            # Forecast / Model
+            "model_trained": False,
+            "model_type": None,
+            "forecast_results": None,
+
+            # Settings
+            "csv_separator": "Auto-detectar",
+            "csv_encoding": "UTF-8",
+            "csv_date_col": "Auto-detectar",
+            "export_format": "CSV",
+            "theme": "Escuro (Padrão)",
+            "scale": "100%",
         }
 
+        # ── Log message queue (cross-page communication) ──────────────────
+        self._log_messages = []
+
         self._current_page = None
+        self._current_page_widget = None
         self._nav_buttons = {}
-        self._pages = {}
 
         # ── Build layout ──────────────────────────────────────────────────
         self._build_sidebar()
@@ -178,13 +205,111 @@ class CLIMAIAApp(ctk.CTk):
         if page_cls:
             page = page_cls(self.page_container, app_ref=self)
             page.pack(fill="both", expand=True)
+            self._current_page_widget = page
 
         self._current_page = page_key
 
     # ──────────────────────────────────────────────────────────────────────
-    # Shared utilities
+    # Cross-page logging
     # ──────────────────────────────────────────────────────────────────────
     def log(self, message: str):
-        """Log a message to the dashboard console if available."""
-        # Navigate to dashboard won't work well here, so just print
-        print(f"[CLIMAIA] {message}")
+        """Log a message. Stored for dashboard replay and printed to stdout."""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        entry = f"[{timestamp}] {message}"
+        self._log_messages.append(entry)
+        print(f"[CLIMAIA] {entry}")
+
+        # If the dashboard is currently visible, push the message live
+        if (self._current_page == "dashboard"
+                and self._current_page_widget
+                and hasattr(self._current_page_widget, 'console')):
+            self._current_page_widget.console.log(message)
+
+    def get_log_messages(self) -> list:
+        """Return all accumulated log messages."""
+        return list(self._log_messages)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # State helpers
+    # ──────────────────────────────────────────────────────────────────────
+    def has_data(self, dtype: str = "any") -> bool:
+        """Check if data is loaded. dtype: 'raw', 'treated', 'any', 'both'."""
+        has_raw = self.app_state.get("raw_df") is not None
+        has_treated = self.app_state.get("treated_df") is not None
+        if dtype == "raw":
+            return has_raw
+        elif dtype == "treated":
+            return has_treated
+        elif dtype == "both":
+            return has_raw and has_treated
+        else:  # any
+            return has_raw or has_treated
+
+    def get_data_columns(self) -> list:
+        """Get the union of column names from loaded datasets."""
+        cols = set()
+        raw_df = self.app_state.get("raw_df")
+        treated_df = self.app_state.get("treated_df")
+        if raw_df is not None:
+            cols.update(raw_df.columns.tolist())
+        if treated_df is not None:
+            cols.update(treated_df.columns.tolist())
+        return sorted(list(cols))
+
+    def get_numeric_columns(self) -> list:
+        """Get numeric column names from loaded datasets."""
+        cols = set()
+        raw_df = self.app_state.get("raw_df")
+        treated_df = self.app_state.get("treated_df")
+        if raw_df is not None:
+            cols.update(raw_df.select_dtypes(include="number").columns.tolist())
+        if treated_df is not None:
+            cols.update(treated_df.select_dtypes(include="number").columns.tolist())
+        return sorted(list(cols))
+
+    def count_loaded_datasets(self) -> int:
+        """Count how many datasets are loaded (0, 1, or 2)."""
+        count = 0
+        if self.app_state.get("raw_df") is not None:
+            count += 1
+        if self.app_state.get("treated_df") is not None:
+            count += 1
+        return count
+
+    def get_total_records(self) -> int:
+        """Get total number of records across all loaded datasets."""
+        total = 0
+        raw_df = self.app_state.get("raw_df")
+        treated_df = self.app_state.get("treated_df")
+        if raw_df is not None:
+            total += len(raw_df)
+        if treated_df is not None:
+            total += len(treated_df)
+        return total
+
+    def get_csv_read_kwargs(self) -> dict:
+        """Build pandas read_csv kwargs from current settings."""
+        kwargs = {}
+
+        # Separator
+        sep = self.app_state.get("csv_separator", "Auto-detectar")
+        sep_map = {
+            "Vírgula (,)": ",",
+            "Ponto e Vírgula (;)": ";",
+            "Tab": "\t",
+        }
+        if sep in sep_map:
+            kwargs["sep"] = sep_map[sep]
+        # else: let pandas auto-detect (default is ',')
+
+        # Encoding
+        enc = self.app_state.get("csv_encoding", "UTF-8")
+        enc_map = {
+            "UTF-8": "utf-8",
+            "Latin-1 (ISO-8859-1)": "latin-1",
+            "Windows-1252": "cp1252",
+        }
+        if enc in enc_map:
+            kwargs["encoding"] = enc_map[enc]
+
+        return kwargs

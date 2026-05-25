@@ -4,6 +4,7 @@ Configure and run extreme event detection on loaded datasets.
 """
 
 import customtkinter as ctk
+import pandas as pd
 from datetime import datetime
 from app.theme import Colors, Fonts, Spacing
 from app.components import (SectionHeader, ActionButton, LabeledEntry,
@@ -17,12 +18,14 @@ class AnalysisPage(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.app = app_ref
         self._build_ui()
+        self._refresh_from_data()
 
     def _build_ui(self):
         scroll = ctk.CTkScrollableFrame(self, fg_color="transparent",
                                          scrollbar_button_color=Colors.BORDER,
                                          scrollbar_button_hover_color=Colors.BORDER_LIGHT)
         scroll.pack(fill="both", expand=True)
+        self._scroll = scroll
 
         # ── Header ────────────────────────────────────────────────────────
         ctk.CTkLabel(scroll, text="Análise de Eventos Extremos",
@@ -31,6 +34,31 @@ class AnalysisPage(ctk.CTkFrame):
         ctk.CTkLabel(scroll, text="Configure os parâmetros e execute a detecção estatística",
                      font=Fonts.BODY, text_color=Colors.TEXT_MUTED,
                      anchor="w").pack(fill="x", pady=(4, Spacing.XL))
+
+        # ── Data Status Banner ────────────────────────────────────────────
+        self.data_banner = ctk.CTkFrame(scroll, fg_color=Colors.BG_CARD,
+                                         corner_radius=Spacing.CORNER,
+                                         border_width=1, border_color=Colors.BORDER)
+        self.data_banner.pack(fill="x", pady=(0, Spacing.XL))
+
+        banner_inner = ctk.CTkFrame(self.data_banner, fg_color="transparent")
+        banner_inner.pack(fill="x", padx=Spacing.CARD_PAD, pady=Spacing.MD)
+
+        self.banner_icon = ctk.CTkLabel(banner_inner, text="⚠️",
+                                         font=(Fonts.FAMILY, 20))
+        self.banner_icon.pack(side="left")
+
+        self.banner_text = ctk.CTkLabel(
+            banner_inner,
+            text="Nenhum dado carregado. Vá para a aba 'Dados' para importar os CSVs.",
+            font=Fonts.BODY, text_color=Colors.TEXT_MUTED, anchor="w")
+        self.banner_text.pack(side="left", padx=(Spacing.SM, 0))
+
+        self.banner_btn = ActionButton(
+            banner_inner, text="Ir para Dados", icon="📂",
+            color=Colors.PRIMARY, width=160,
+            command=lambda: self.app.navigate("data") if self.app else None)
+        self.banner_btn.pack(side="right")
 
         # ── Configuration Grid ────────────────────────────────────────────
         config_row = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -79,7 +107,8 @@ class AnalysisPage(ctk.CTkFrame):
         # Granularity
         self.granularity = LabeledOptionMenu(
             left_inner, label="Granularidade Temporal",
-            values=["10 min", "Horária", "Diária", "Semanal", "Mensal"],
+            values=["Original (sem resample)", "10 min", "Horária", "Diária",
+                    "Semanal", "Mensal"],
             default="Horária")
         self.granularity.pack(fill="x")
 
@@ -147,17 +176,20 @@ class AnalysisPage(ctk.CTkFrame):
                       subtitle="Selecione quais variáveis meteorológicas serão analisadas").pack(
                           fill="x", pady=(0, Spacing.MD))
 
-        var_card = ctk.CTkFrame(scroll, fg_color=Colors.BG_CARD,
+        self.var_card = ctk.CTkFrame(scroll, fg_color=Colors.BG_CARD,
                                  corner_radius=Spacing.CORNER,
                                  border_width=1, border_color=Colors.BORDER)
-        var_card.pack(fill="x", pady=(0, Spacing.XL))
+        self.var_card.pack(fill="x", pady=(0, Spacing.XL))
 
-        var_inner = ctk.CTkFrame(var_card, fg_color="transparent")
-        var_inner.pack(fill="both", padx=Spacing.CARD_PAD,
+        self.var_inner = ctk.CTkFrame(self.var_card, fg_color="transparent")
+        self.var_inner.pack(fill="both", padx=Spacing.CARD_PAD,
                        pady=Spacing.CARD_PAD)
 
         self.var_checkboxes = {}
-        default_vars = [
+        self._var_grid = None
+
+        # Default variables (shown when no data is loaded)
+        self._default_vars = [
             ("Velocidade do Vento", True),
             ("Temperatura", True),
             ("Radiação Solar (POA)", True),
@@ -165,28 +197,15 @@ class AnalysisPage(ctk.CTkFrame):
             ("Umidade Relativa", False),
             ("Precipitação", False),
         ]
+        self._build_variable_checkboxes(self._default_vars)
 
-        var_grid = ctk.CTkFrame(var_inner, fg_color="transparent")
-        var_grid.pack(fill="x")
-        var_grid.columnconfigure((0, 1, 2), weight=1, uniform="var")
-
-        for i, (name, default) in enumerate(default_vars):
-            cb = ctk.CTkCheckBox(
-                var_grid, text=name, font=Fonts.BODY,
-                fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER,
-                text_color=Colors.TEXT_PRIMARY,
-                border_color=Colors.BORDER_LIGHT)
-            cb.grid(row=i // 3, column=i % 3, sticky="w",
-                    padx=Spacing.SM, pady=Spacing.XS)
-            if default:
-                cb.select()
-            self.var_checkboxes[name] = cb
-
-        # Info: auto-detect
-        ctk.CTkLabel(var_inner,
-                     text="💡 As variáveis serão detectadas automaticamente a partir das colunas do CSV carregado.",
-                     font=Fonts.SMALL, text_color=Colors.TEXT_MUTED,
-                     anchor="w").pack(fill="x", pady=(Spacing.MD, 0))
+        # Info
+        self.var_info_label = ctk.CTkLabel(
+            self.var_inner,
+            text="💡 Carregue os dados para que as variáveis sejam detectadas automaticamente das colunas do CSV.",
+            font=Fonts.SMALL, text_color=Colors.TEXT_MUTED,
+            anchor="w")
+        self.var_info_label.pack(fill="x", pady=(Spacing.MD, 0))
 
         # ── Run Analysis ──────────────────────────────────────────────────
         run_frame = ctk.CTkFrame(scroll, fg_color="transparent")
@@ -196,6 +215,12 @@ class AnalysisPage(ctk.CTkFrame):
                      color=Colors.ACCENT_EMERALD,
                      hover_color="#059669",
                      command=self._run_analysis, width=220).pack(side="left")
+
+        ActionButton(run_frame, text="Limpar Console", icon="🗑️",
+                     color=Colors.BG_CARD_HOVER,
+                     hover_color=Colors.DANGER,
+                     command=self._clear_console, width=180).pack(
+                         side="left", padx=(Spacing.SM, 0))
 
         self.run_status = StatusBadge(run_frame, status="idle",
                                        text="AGUARDANDO")
@@ -208,45 +233,200 @@ class AnalysisPage(ctk.CTkFrame):
         self.console = ConsoleBox(scroll, height=180)
         self.console.pack(fill="x")
 
+    def _build_variable_checkboxes(self, var_list):
+        """Build or rebuild the variable checkbox grid."""
+        # Destroy old grid if exists
+        if self._var_grid:
+            self._var_grid.destroy()
+        self.var_checkboxes = {}
+
+        self._var_grid = ctk.CTkFrame(self.var_inner, fg_color="transparent")
+        self._var_grid.pack(fill="x", before=self.var_info_label
+                            if hasattr(self, 'var_info_label') else None)
+
+        # Use 3 columns
+        cols = 3
+        self._var_grid.columnconfigure(tuple(range(cols)), weight=1, uniform="var")
+
+        for i, (name, default) in enumerate(var_list):
+            cb = ctk.CTkCheckBox(
+                self._var_grid, text=name, font=Fonts.BODY,
+                fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER,
+                text_color=Colors.TEXT_PRIMARY,
+                border_color=Colors.BORDER_LIGHT)
+            cb.grid(row=i // cols, column=i % cols, sticky="w",
+                    padx=Spacing.SM, pady=Spacing.XS)
+            if default:
+                cb.select()
+            self.var_checkboxes[name] = cb
+
+    def _refresh_from_data(self):
+        """Update the page based on currently loaded data."""
+        if not self.app:
+            return
+
+        has_data = self.app.has_data("any")
+
+        # Update banner
+        if has_data:
+            datasets = []
+            if self.app.has_data("raw"):
+                raw_df = self.app.app_state["raw_df"]
+                datasets.append(f"Bruto ({len(raw_df):,} linhas)")
+            if self.app.has_data("treated"):
+                treated_df = self.app.app_state["treated_df"]
+                datasets.append(f"Tratado ({len(treated_df):,} linhas)")
+
+            self.banner_icon.configure(text="✅")
+            self.banner_text.configure(
+                text=f"Dados carregados: {' | '.join(datasets)}",
+                text_color=Colors.ACCENT_EMERALD)
+            self.banner_btn.configure(text="📂  Recarregar Dados")
+
+            # Build variable checkboxes from actual CSV columns
+            numeric_cols = self.app.get_numeric_columns()
+            if numeric_cols:
+                # Create checkbox list from detected columns (all selected by default)
+                var_list = [(col, True) for col in numeric_cols]
+                self._build_variable_checkboxes(var_list)
+                self.var_info_label.configure(
+                    text=f"✅ {len(numeric_cols)} variáveis numéricas detectadas automaticamente dos dados carregados.")
+
+            # Restore analysis status if previously run
+            if self.app.app_state.get("analysis_ran"):
+                self.run_status.set_status("ready", "CONCLUÍDA")
+        else:
+            self.banner_icon.configure(text="⚠️")
+            self.banner_text.configure(
+                text="Nenhum dado carregado. Vá para a aba 'Dados' para importar os CSVs.",
+                text_color=Colors.TEXT_MUTED)
+            self.banner_btn.configure(text="📂  Ir para Dados")
+            self._build_variable_checkboxes(self._default_vars)
+
     def _on_period_change(self, value):
-        """Handle period preset changes."""
-        pass  # Date fields remain available for manual override
+        """Handle period preset changes — auto-fill date fields from data."""
+        if value == "Todo o Dataset" and self.app and self.app.has_data("any"):
+            # Try to detect date range from data
+            for dtype in ["raw_df", "treated_df"]:
+                df = self.app.app_state.get(dtype)
+                if df is not None:
+                    # Try to find a date column
+                    date_col = self.app.app_state.get("csv_date_col", "Auto-detectar")
+                    if date_col == "Auto-detectar":
+                        # Heuristic: look for common date column names
+                        possible = [c for c in df.columns if any(
+                            x in c.lower() for x in ["date", "time", "timestamp", "data"])]
+                        if possible:
+                            date_col = possible[0]
+                    if date_col and date_col in df.columns:
+                        try:
+                            dates = pd.to_datetime(df[date_col], errors="coerce")
+                            self.date_start.set(str(dates.min().date()))
+                            self.date_end.set(str(dates.max().date()))
+                            self.console.log(
+                                f"Período detectado: {dates.min().date()} a {dates.max().date()}")
+                            return
+                        except Exception:
+                            pass
+            self.date_start.set("")
+            self.date_end.set("")
+        elif value == "Personalizado":
+            self.date_start.set("")
+            self.date_end.set("")
+            self.console.log("Modo personalizado: insira as datas manualmente.")
 
     def _run_analysis(self):
-        """Execute the analysis pipeline (placeholder for now)."""
-        # Validation
-        has_raw = self.app and self.app.state.get("raw_df") is not None
-        has_treated = self.app and self.app.state.get("treated_df") is not None
+        """Execute the analysis pipeline — validates data and logs config."""
+        # ── Validation ────────────────────────────────────────────────────
+        if not self.app:
+            return
+
+        has_raw = self.app.has_data("raw")
+        has_treated = self.app.has_data("treated")
         want_raw = self.apply_raw.get()
         want_treated = self.apply_treated.get()
 
+        if not want_raw and not want_treated:
+            self.console.log("❌ ERRO: Selecione pelo menos um dataset (Bruto ou Tratado) para analisar.")
+            self.run_status.set_status("error", "SEM SELEÇÃO")
+            return
+
         if want_raw and not has_raw:
-            self.console.log("ERRO: Dados brutos não carregados. Vá para a aba 'Dados' primeiro.")
+            self.console.log("❌ ERRO: 'Dados Brutos' selecionado mas não carregado.")
+            self.console.log("   → Vá para a aba 'Dados' e carregue o CSV bruto.")
             self.run_status.set_status("error", "SEM DADOS")
             return
         if want_treated and not has_treated:
-            self.console.log("ERRO: Dados tratados não carregados. Vá para a aba 'Dados' primeiro.")
+            self.console.log("❌ ERRO: 'Dados Tratados' selecionado mas não carregado.")
+            self.console.log("   → Vá para a aba 'Dados' e carregue o CSV tratado.")
             self.run_status.set_status("error", "SEM DADOS")
             return
 
-        # Get config
+        # Get selected variables
+        selected_vars = [name for name, cb in self.var_checkboxes.items() if cb.get()]
+        if not selected_vars:
+            self.console.log("❌ ERRO: Selecione pelo menos uma variável para analisar.")
+            self.run_status.set_status("error", "SEM VARIÁVEIS")
+            return
+
+        # Validate threshold
+        try:
+            threshold_val = float(self.threshold.get())
+            if not (0 < threshold_val <= 100):
+                raise ValueError
+        except ValueError:
+            self.console.log("❌ ERRO: Limiar deve ser um número entre 1 e 100.")
+            self.run_status.set_status("error", "LIMIAR INVÁLIDO")
+            return
+
+        # ── Get config ────────────────────────────────────────────────────
         method = self.method.get()
-        threshold = self.threshold.get()
         granularity = self.granularity.get()
         period = self.period_preset.get()
 
         self.run_status.set_status("running", "EXECUTANDO...")
-        self.console.log(f"Iniciando análise...")
-        self.console.log(f"  Método: {method}")
-        self.console.log(f"  Limiar: {threshold}%")
-        self.console.log(f"  Granularidade: {granularity}")
-        self.console.log(f"  Período: {period}")
+        self.console.log("━" * 50)
+        self.console.log("🔬 Iniciando análise de eventos extremos...")
+        self.console.log(f"  📊 Método: {method}")
+        self.console.log(f"  🎯 Limiar: {threshold_val}%")
+        self.console.log(f"  ⏱️  Granularidade: {granularity}")
+        self.console.log(f"  📅 Período: {period}")
 
-        selected_vars = [name for name, cb in self.var_checkboxes.items() if cb.get()]
-        self.console.log(f"  Variáveis: {', '.join(selected_vars)}")
+        if want_raw:
+            raw_rows = len(self.app.app_state["raw_df"])
+            self.console.log(f"  📄 Dataset Bruto: {raw_rows:,} registros")
+        if want_treated:
+            treated_rows = len(self.app.app_state["treated_df"])
+            self.console.log(f"  ✨ Dataset Tratado: {treated_rows:,} registros")
 
-        # Placeholder – this is where the statistical engine will be called
+        self.console.log(f"  🔢 Variáveis ({len(selected_vars)}): {', '.join(selected_vars)}")
+
+        # ── Save config to app state ──────────────────────────────────────
+        config = {
+            "method": method,
+            "threshold": threshold_val,
+            "granularity": granularity,
+            "period": period,
+            "variables": selected_vars,
+            "apply_raw": bool(want_raw),
+            "apply_treated": bool(want_treated),
+            "timestamp": datetime.now().isoformat(),
+        }
+        self.app.app_state["analysis_config"] = config
+        self.app.app_state["analysis_ran"] = True
+
+        # ── Placeholder for statistical engine ────────────────────────────
         self.console.log("")
-        self.console.log("⏳ Motor estatístico ainda não implementado.")
-        self.console.log("   O modelo será integrado na próxima fase do projeto.")
-        self.run_status.set_status("warning", "NÃO IMPLEMENTADO")
+        self.console.log("⏳ O motor estatístico será implementado na Fase 2.")
+        self.console.log("   → Aguardando integração com scipy.stats (EVT, Gumbel, etc.)")
+        self.console.log("   → Quando implementado, os resultados aparecerão na aba 'Comparação'.")
+        self.console.log("━" * 50)
+        self.run_status.set_status("warning", "FASE 2 PENDENTE")
+
+        # Log to app
+        self.app.log(f"Análise configurada: {method} | {len(selected_vars)} variáveis | Limiar {threshold_val}%")
+
+    def _clear_console(self):
+        """Clear the analysis console."""
+        self.console.clear()
+        self.console.log("Console limpo.")

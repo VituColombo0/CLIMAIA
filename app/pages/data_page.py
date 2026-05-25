@@ -17,9 +17,8 @@ class DataPage(ctk.CTkFrame):
     def __init__(self, master, app_ref=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
         self.app = app_ref
-        self.raw_df = None
-        self.treated_df = None
         self._build_ui()
+        self._restore_state()
 
     def _build_ui(self):
         scroll = ctk.CTkScrollableFrame(self, fg_color="transparent",
@@ -182,6 +181,41 @@ class DataPage(ctk.CTkFrame):
 
         return card
 
+    def _restore_state(self):
+        """Restore previews if data was previously loaded in app_state."""
+        if not self.app:
+            return
+
+        state = self.app.app_state
+
+        # Restore raw data display
+        raw_df = state.get("raw_df")
+        if raw_df is not None:
+            raw_path = state.get("raw_path", "")
+            filename = os.path.basename(raw_path) if raw_path else "arquivo.csv"
+            rows, cols = raw_df.shape
+            self.raw_badge.set_status("ready", "CARREGADO")
+            self.raw_info.configure(
+                text=f"📄 {filename}  •  {rows:,} linhas  •  {cols} colunas",
+                text_color=Colors.TEXT_SECONDARY)
+            self._update_preview(self.raw_preview_text, raw_df)
+
+        # Restore treated data display
+        treated_df = state.get("treated_df")
+        if treated_df is not None:
+            treated_path = state.get("treated_path", "")
+            filename = os.path.basename(treated_path) if treated_path else "arquivo.csv"
+            rows, cols = treated_df.shape
+            self.treated_badge.set_status("ready", "CARREGADO")
+            self.treated_info.configure(
+                text=f"📄 {filename}  •  {rows:,} linhas  •  {cols} colunas",
+                text_color=Colors.TEXT_SECONDARY)
+            self._update_preview(self.treated_preview_text, treated_df)
+
+        # Restore summary
+        if raw_df is not None or treated_df is not None:
+            self._update_summary()
+
     def _load_file(self, dtype: str):
         filepath = filedialog.askopenfilename(
             title=f"Selecionar {'Dados Brutos' if dtype == 'raw' else 'Dados Tratados'}",
@@ -191,19 +225,28 @@ class DataPage(ctk.CTkFrame):
             return
 
         try:
-            df = pd.read_csv(filepath)
+            # Get CSV read settings from app state
+            read_kwargs = {}
+            if self.app:
+                read_kwargs = self.app.get_csv_read_kwargs()
+
+            # Try with settings first, fallback to defaults
+            try:
+                df = pd.read_csv(filepath, **read_kwargs)
+            except Exception:
+                # Fallback: try without custom settings
+                df = pd.read_csv(filepath)
+
             filename = os.path.basename(filepath)
             rows, cols = df.shape
 
             if dtype == "raw":
-                self.raw_df = df
                 self.raw_badge.set_status("ready", "CARREGADO")
                 self.raw_info.configure(
                     text=f"📄 {filename}  •  {rows:,} linhas  •  {cols} colunas",
                     text_color=Colors.TEXT_SECONDARY)
                 self._update_preview(self.raw_preview_text, df)
             else:
-                self.treated_df = df
                 self.treated_badge.set_status("ready", "CARREGADO")
                 self.treated_info.configure(
                     text=f"📄 {filename}  •  {rows:,} linhas  •  {cols} colunas",
@@ -213,38 +256,65 @@ class DataPage(ctk.CTkFrame):
             # Store in app state
             if self.app:
                 if dtype == "raw":
-                    self.app.state["raw_df"] = df
-                    self.app.state["raw_path"] = filepath
+                    self.app.app_state["raw_df"] = df
+                    self.app.app_state["raw_path"] = filepath
+                    self.app.app_state["raw_columns"] = df.columns.tolist()
                 else:
-                    self.app.state["treated_df"] = df
-                    self.app.state["treated_path"] = filepath
-                self.app.log(f"Dataset {'bruto' if dtype == 'raw' else 'tratado'} carregado: {filename} ({rows:,} linhas)")
+                    self.app.app_state["treated_df"] = df
+                    self.app.app_state["treated_path"] = filepath
+                    self.app.app_state["treated_columns"] = df.columns.tolist()
+
+                # Reset downstream results (analysis/comparison invalidated)
+                self.app.app_state["analysis_ran"] = False
+                self.app.app_state["analysis_results"] = None
+                self.app.app_state["comparison_ran"] = False
+                self.app.app_state["comparison_results"] = None
+
+                self.app.log(
+                    f"Dataset {'bruto' if dtype == 'raw' else 'tratado'} carregado: "
+                    f"{filename} ({rows:,} linhas, {cols} colunas)")
 
             self._update_summary()
 
         except Exception as e:
             messagebox.showerror("Erro ao Carregar",
                                   f"Não foi possível ler o arquivo:\n{e}")
+            if self.app:
+                self.app.log(f"ERRO ao carregar arquivo: {e}")
 
     def _clear_data(self, dtype: str):
+        """Clear loaded data and reset downstream analysis state."""
         if dtype == "raw":
-            self.raw_df = None
             self.raw_badge.set_status("idle", "NÃO CARREGADO")
             self.raw_info.configure(text="Nenhum arquivo selecionado",
                                      text_color=Colors.TEXT_DISABLED)
             self._update_preview(self.raw_preview_text, None)
             if self.app:
-                self.app.state["raw_df"] = None
-                self.app.state["raw_path"] = None
+                old_path = self.app.app_state.get("raw_path")
+                self.app.app_state["raw_df"] = None
+                self.app.app_state["raw_path"] = None
+                self.app.app_state["raw_columns"] = []
+                if old_path:
+                    self.app.log(f"Dados brutos removidos ({os.path.basename(old_path)})")
         else:
-            self.treated_df = None
             self.treated_badge.set_status("idle", "NÃO CARREGADO")
             self.treated_info.configure(text="Nenhum arquivo selecionado",
                                          text_color=Colors.TEXT_DISABLED)
             self._update_preview(self.treated_preview_text, None)
             if self.app:
-                self.app.state["treated_df"] = None
-                self.app.state["treated_path"] = None
+                old_path = self.app.app_state.get("treated_path")
+                self.app.app_state["treated_df"] = None
+                self.app.app_state["treated_path"] = None
+                self.app.app_state["treated_columns"] = []
+                if old_path:
+                    self.app.log(f"Dados tratados removidos ({os.path.basename(old_path)})")
+
+        # Invalidate downstream results
+        if self.app:
+            self.app.app_state["analysis_ran"] = False
+            self.app.app_state["analysis_results"] = None
+            self.app.app_state["comparison_ran"] = False
+            self.app.app_state["comparison_results"] = None
 
         self._update_summary()
 
@@ -262,14 +332,21 @@ class DataPage(ctk.CTkFrame):
         self.summary_text.delete("1.0", "end")
 
         parts = []
-        if self.raw_df is not None:
+        raw_df = self.app.app_state.get("raw_df") if self.app else None
+        treated_df = self.app.app_state.get("treated_df") if self.app else None
+
+        if raw_df is not None:
             parts.append("═══ DADOS BRUTOS ═══\n")
-            parts.append(self.raw_df.describe().to_string())
+            parts.append(f"Colunas: {', '.join(raw_df.columns.tolist())}\n")
+            parts.append(f"Tipos: {dict(raw_df.dtypes)}\n\n")
+            parts.append(raw_df.describe().to_string())
             parts.append("\n\n")
 
-        if self.treated_df is not None:
+        if treated_df is not None:
             parts.append("═══ DADOS TRATADOS ═══\n")
-            parts.append(self.treated_df.describe().to_string())
+            parts.append(f"Colunas: {', '.join(treated_df.columns.tolist())}\n")
+            parts.append(f"Tipos: {dict(treated_df.dtypes)}\n\n")
+            parts.append(treated_df.describe().to_string())
 
         if not parts:
             parts.append("Carregue os dados para ver o resumo estatístico.")
