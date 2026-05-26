@@ -59,6 +59,15 @@ O projeto combina **Deep Learning** (LSTM), **Machine Learning** (XGBoost) e **m
 
 ## 🚀 Como Executar
 
+### Para Usuários de Windows (Mais Fácil)
+
+Se você baixou este código no Windows e quer apenas abrir o software para testar:
+1. Tenha o **Python** instalado na sua máquina (certifique-se de marcar a opção "Add Python to PATH" durante a instalação do Python).
+2. Dê um duplo clique no arquivo **`run_windows.bat`**.
+3. O script irá baixar as bibliotecas automaticamente, criar o ambiente virtual e abrir a interface do sistema.
+
+### Para Desenvolvedores (Linux/Mac/Terminal)
+
 ```bash
 # 1. Clone o repositório
 git clone https://github.com/VituColombo0/CLIMAIA.git

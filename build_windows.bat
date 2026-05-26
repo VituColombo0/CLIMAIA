@@ -4,12 +4,18 @@ echo   Construindo CLIMAIA para Windows (PyInstaller)
 echo ===================================================
 echo.
 
-echo 1. Instalando dependencias...
+if not exist venv_win (
+    echo 1. Criando ambiente virtual isolado para Windows...
+    python -m venv venv_win
+)
+
+echo 2. Instalando dependencias no ambiente virtual...
+call venv_win\Scripts\activate.bat
 pip install -r requirements.txt
 pip install pyinstaller
 
 echo.
-echo 2. Gerando executavel...
+echo 3. Gerando executavel (pode demorar alguns minutos)...
 pyinstaller --clean CLIMAIA.spec
 
 echo.
