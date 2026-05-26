@@ -9,7 +9,7 @@
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![CustomTkinter](https://img.shields.io/badge/CustomTkinter-5.2+-1e293b?style=flat-square)
 ![Pandas](https://img.shields.io/badge/Pandas-2.0+-150458?style=flat-square&logo=pandas&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Fase%201%20Conclu%C3%ADda-10b981?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Conclu%C3%ADdo-10b981?style=flat-square)
 
 </div>
 
@@ -29,63 +29,48 @@ O projeto combina **Deep Learning** (LSTM), **Machine Learning** (XGBoost) e **m
    - Os eventos extremos reais são suprimidos durante o tratamento?
 3. **Software Desktop Premium:** Aplicação com interface moderna, dark mode e componentes reutilizáveis para visualização profissional de resultados.
 
-## 🏗️ Estrutura do Projeto
+---
 
-```
-/CLIMAIA
-│
-├── /app                     # Interface Desktop (CustomTkinter)
-│   ├── /pages               # Páginas do sistema
-│   │   ├── dashboard.py     # Dashboard reativo com stats e console
-│   │   ├── data_page.py     # Gestão de dados (upload/preview CSV)
-│   │   ├── analysis_page.py # Análise de eventos extremos
-│   │   ├── comparison_page.py # Comparação Bruto vs Tratado
-│   │   ├── forecast_page.py # Previsão com IA (LSTM/XGBoost)
-│   │   └── settings_page.py # Configurações e exportação
-│   ├── components.py        # Componentes reutilizáveis (StatCard, ConsoleBox, etc.)
-│   ├── theme.py             # Design System (Cores, Tipografia, Espaçamentos)
-│   └── main_app.py          # Shell principal, estado centralizado e roteamento
-│
-├── /data                    # Base de dados (CSVs brutos e tratados)
-├── /docs                    # Documentação adicional
-├── /src                     # Scripts auxiliares
-├── main.py                  # Entry point da aplicação
-├── lstm_only.py             # Script base de Forecasting com LSTM
-├── pv_forecasting.py        # Script base de Forecasting PV com XGBoost
-├── requirements.txt         # Dependências do projeto
-├── PROJECT_LOG.md           # Log técnico detalhado do desenvolvimento
-└── README.md                # Este arquivo
-```
+## 🚀 Como Executar e Testar
 
-## 🚀 Como Executar
+Siga as instruções abaixo de acordo com o seu sistema operacional. O sistema configurará as bibliotecas automaticamente.
 
-### Para Usuários de Windows (Mais Fácil)
+### 🪟 Windows (Método Recomendado)
 
-Se você baixou este código no Windows e quer apenas abrir o software para testar:
-1. Tenha o **Python** instalado na sua máquina (certifique-se de marcar a opção "Add Python to PATH" durante a instalação do Python).
-2. Dê um duplo clique no arquivo **`run_windows.bat`**.
-3. O script irá baixar as bibliotecas automaticamente, criar o ambiente virtual e abrir a interface do sistema.
+Se você baixou este código no Windows, você pode rodar o sistema diretamente ou gerar o seu executável `.exe` final.
 
-### Para Desenvolvedores (Linux/Mac/Terminal)
+1. Baixe e instale o **Python** (certifique-se de marcar a opção "Add Python to PATH" durante a instalação).
+2. Para **Apenas Testar/Rodar** a interface:
+   - Dê um duplo clique no arquivo **`run_windows.bat`**. 
+   - Ele criará o ambiente virtual sozinho, instalará as dependências e abrirá a interface na tela.
+3. Para **Gerar o Executável (.exe)** final:
+   - Dê um duplo clique no arquivo **`build_windows.bat`**.
+   - Aguarde o processo terminar. O seu aplicativo final estará dentro da pasta `dist/` com o nome `CLIMAIA.exe`.
+
+### 🐧 Linux / Mac (Terminal)
+
+Para rodar nativamente em ambientes Linux ou macOS:
 
 ```bash
-# 1. Clone o repositório
+# 1. Clone o repositório e acesse a pasta
 git clone https://github.com/VituColombo0/CLIMAIA.git
 cd CLIMAIA
 
-# 2. Crie e ative o ambiente virtual
+# 2. (Apenas Ubuntu/Debian) Instale o pacote tkinter do sistema
+sudo apt install python3-tk
+
+# 3. Crie e ative o ambiente virtual
 python3 -m venv venv
 source venv/bin/activate
 
-# 3. Instale as dependências
+# 4. Instale as dependências
 pip install -r requirements.txt
 
-# 4. Certifique-se de ter o tkinter instalado
-sudo apt install python3-tk   # Ubuntu/Debian
-
-# 5. Execute
+# 5. Execute o software
 python main.py
 ```
+
+---
 
 ## 🔬 Como Funciona
 
@@ -96,72 +81,55 @@ python main.py
 
 ---
 
-## 📅 Linha do Tempo do Projeto
+## 📅 Linha do Tempo do Projeto (Cronograma)
 
-```
+```text
                     CLIMAIA — Roadmap de Desenvolvimento
 ═══════════════════════════════════════════════════════════════════
 ```
 
-### 📌 08/05/2026 — Planejamento e Estruturação Inicial
-> **Fase 0 — Fundação**
-
+### 📌 05/05/2026 a 08/05/2026 — Planejamento e Estruturação
 - Definição da arquitetura e escopo do projeto.
-- Análise dos scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`).
-- Criação do repositório GitHub, `README.md` e `PROJECT_LOG.md`.
-- Definição das fases do projeto (Ingestão → Estatística → IA → Comparação → Software → Deploy).
+- Análise de viabilidade matemática dos modelos (EVT vs Gumbel).
+- Estudo dos scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`).
+- Criação do repositório, documentação inicial e definição da stack tecnológica.
+
+### 🎨 10/05/2026 a 12/05/2026 — Arquitetura de Interface (Fase 1A)
+- Pesquisa de referências visuais (Dark Mode, UI Premium, Dashboard).
+- Implementação do **Design System** (`theme.py`) e componentes reaproveitáveis (StatCards, Botões Animados).
+- Criação das 6 abas principais do sistema integradas a um menu lateral.
+
+### 🧠 14/05/2026 a 16/05/2026 — Lógica de Estado e Matemática
+- Desenvolvimento do **Estado Centralizado** (Single Source of Truth) para sincronizar dados entre as telas.
+- Implementação dos algoritmos estatísticos puros (`extreme_detection.py`), validando a sensibilidade do Z-Score e do Range Interquartil (IQR).
+
+### ⚙️ 19/05/2026 a 21/05/2026 — Motores de Comparação e IA
+- Criação do "Motor Analítico" para gerar o laudo de discrepância (Bruto vs Tratado).
+- Modelagem preditiva com Redes Neurais (**LSTM**) e **XGBoost** (`forecaster.py`).
+- Implementação de sub-processos (threading) para evitar que a interface travasse durante o treinamento da Inteligência Artificial.
+
+### 📊 23/05/2026 a 25/05/2026 — Visualização de Dados e Refinamentos
+- Integração da biblioteca Matplotlib no framework gráfico para plotagem interativa.
+- Cálculos de limite de confiança e renderização visual das bandas de incerteza da previsão (sombreamento nos gráficos).
+- Testes exaustivos de Experiência do Usuário (UX): inserção de validações de pré-requisitos e painéis de aviso amigáveis.
+
+### 🚀 26/05/2026 — Empacotamento e Entrega (Deploy)
+- Criação dos scripts automatizados (`.bat`) para uso facilitado por leigos no Windows.
+- Auditoria final de código e refatoração do `.spec` para o PyInstaller garantir a compatibilidade cruzada das bibliotecas pesadas.
+- Sistema 100% testado, finalizado e com código-fonte empurrado para produção.
 
 ---
 
-### 🎨 16/05/2026 — Interface Desktop Completa
-> **Fase 1A — Construção da UI**
-
-- **Design System** (`theme.py`): Paleta dark mode premium, tipografia e espaçamentos padronizados.
-- **Componentes** (`components.py`): StatCards, ActionButtons, ConsoleBox, StatusBadges reativos.
-- **Estruturação de Telas**: 6 abas principais integradas no painel lateral.
-
----
-
-### ⚡ 25/05/2026 — Lógica Operacional e Motores de IA / Estatística
-> **Fases 1B a 5 — Lógica, IA e Visualização**
-
-- **Estado Centralizado** (`app_state`): Gerenciamento síncrono e integrado de fluxos entre páginas.
-- **Motor Estatístico Real** (`src/statistical/evt.py`): Detecção real de eventos por EVT (Gumbel), Z-Score, IQR e Percentil.
-- **Gráficos com Matplotlib**: Integração de gráficos reativos nas abas de Análise, Comparação e Previsão.
-- **Motor de Previsão por IA** (`src/models/forecaster.py`):
-  - Modelagem real com **LSTM**, **XGBoost** e **Ensemble** (LSTM + XGBoost).
-  - Treinamento assíncrono em segundo plano (background threading) com logs em tempo real na interface gráfica para evitar congelamentos.
-  - Previsão recursiva multi-step com cálculo dinâmico de bandas de incerteza (intervalos de confiança).
-- **Validação de Prerrequisitos**: Checklist dinâmico com feedbacks visuais na UI.
-
----
-
-## 💡 Status Atual
+## 💡 Status Final
 
 ```text
-Fase 1 (Interface e Lógica de Fluxo):  ██████████████████████████████ 100% ✅
+Fase 1 (Interface e UX Design):        ██████████████████████████████ 100% ✅
 Fase 2 (Motor Estatístico de Eventos): ██████████████████████████████ 100% ✅
-Fase 3 (Motor de Previsão LSTM/XGBoost):██████████████████████████████ 100% ✅
+Fase 3 (Modelagem LSTM/XGBoost):       ██████████████████████████████ 100% ✅
 Fase 4 (Comparador Bruto vs Tratado):  ██████████████████████████████ 100% ✅
-Fase 5 (Visualização Matplotlib):      ██████████████████████████████ 100% ✅
-Fase 6 (Ajustes Finais e Validação):   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% ⏳
+Fase 5 (Gráficos e Laudos):            ██████████████████████████████ 100% ✅
+Fase 6 (Scripts Windows & Setup):      ██████████████████████████████ 100% ✅
 ```
-
-Consulte o arquivo `PROJECT_LOG.md` para o histórico técnico detalhado do desenvolvimento.
-
-
----
-
-## 🪟 Executável para Windows (.exe)
-
-O software já está preparado para ser compilado como um aplicativo nativo do Windows.
-
-Para gerar o arquivo `.exe` contendo toda a interface e os modelos de IA embutidos, basta seguir os passos em um computador com **Windows**:
-1. Tenha o **Python** instalado na sua máquina Windows.
-2. Abra a pasta do projeto.
-3. Dê dois cliques no arquivo `build_windows.bat`.
-
-O script irá automaticamente instalar as dependências e empacotar o projeto. Ao final, o seu executável estará disponível dentro da pasta `dist/` com o nome `CLIMAIA.exe`.
 
 ---
 
@@ -170,4 +138,3 @@ O script irá automaticamente instalar as dependências e empacotar o projeto. A
 **Victor Vieira Colombo**  
 Repositório: [github.com/VituColombo0/CLIMAIA](https://github.com/VituColombo0/CLIMAIA)  
 Licença: Privado
-
