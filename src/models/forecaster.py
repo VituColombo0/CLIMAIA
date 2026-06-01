@@ -170,7 +170,7 @@ class ClimaiaForecaster:
     def predict(self, df: pd.DataFrame, target_col: str, date_col: str, horizon_hours: int, confidence_level: float):
         """Generate prediction horizon with confidence intervals using recursive multi-step forecasting."""
         # Setup target date range
-        last_date = pd.to_datetime(df[date_col].max()) if date_col and date_col in df.columns else datetime.now()
+        last_date = pd.to_datetime(df[date_col].max()) if date_col and date_col in df.columns else pd.Timestamp.now()
         
         # Calculate dataset interval in minutes
         if date_col and date_col in df.columns and len(df) > 2:

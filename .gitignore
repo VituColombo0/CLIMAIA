@@ -1,5 +1,16 @@
 venv/
+venv_win/
 __pycache__/
 *.pyc
-data/
-venv_win/
+
+# Ignore raw/consolidated data files but keep trained models
+data/raw/
+data/treated/
+data/results/
+
+# Keep models_trained/ (tracked by git for deployment)
+# data/models_trained/ is NOT ignored
+
+*.egg-info/
+dist/
+build/

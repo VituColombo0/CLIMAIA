@@ -26,7 +26,7 @@ def detect_extremes(df: pd.DataFrame, column: str, method: str, threshold_pct: f
     if df is None or column not in df.columns:
         return pd.Series(False, index=df.index if df is not None else [])
     
-    series = pd.to_numeric(df[column], errors='coerce').fillna(method='ffill').fillna(method='bfill')
+    series = pd.to_numeric(df[column], errors='coerce').ffill().bfill()
     
     # Check if we have valid numeric values
     if series.dropna().empty:

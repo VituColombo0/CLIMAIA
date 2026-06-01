@@ -9,6 +9,7 @@ a = Analysis(
     datas=[
         ('app', 'app'),
         ('src', 'src'),
+        ('data', 'data'),
     ],
     hiddenimports=[
         'customtkinter',

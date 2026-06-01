@@ -219,23 +219,37 @@ class DataPage(ctk.CTkFrame):
     def _load_file(self, dtype: str):
         filepath = filedialog.askopenfilename(
             title=f"Selecionar {'Dados Brutos' if dtype == 'raw' else 'Dados Tratados'}",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")])
+            filetypes=[
+                ("Dados Climáticos", "*.csv *.xlsx *.xls"),
+                ("CSV files", "*.csv"),
+                ("Excel files", "*.xlsx *.xls"),
+                ("All files", "*.*"),
+            ])
 
         if not filepath:
             return
 
         try:
-            # Get CSV read settings from app state
-            read_kwargs = {}
-            if self.app:
-                read_kwargs = self.app.get_csv_read_kwargs()
+            ext = os.path.splitext(filepath)[1].lower()
 
-            # Try with settings first, fallback to defaults
-            try:
-                df = pd.read_csv(filepath, **read_kwargs)
-            except Exception:
-                # Fallback: try without custom settings
-                df = pd.read_csv(filepath)
+            if ext in ('.xlsx', '.xls'):
+                # Excel file
+                df = pd.read_excel(filepath, engine='openpyxl')
+            else:
+                # CSV file — get settings from app state
+                read_kwargs = {}
+                if self.app:
+                    read_kwargs = self.app.get_csv_read_kwargs()
+
+                # Try with settings first, fallback to auto-detect separator
+                try:
+                    df = pd.read_csv(filepath, **read_kwargs)
+                except Exception:
+                    # Fallback: try semicolon separator (common in BR data)
+                    try:
+                        df = pd.read_csv(filepath, sep=';')
+                    except Exception:
+                        df = pd.read_csv(filepath)
 
             filename = os.path.basename(filepath)
             rows, cols = df.shape

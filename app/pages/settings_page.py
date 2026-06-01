@@ -75,7 +75,8 @@ class SettingsPage(ctk.CTkFrame):
         self.date_col = LabeledOptionMenu(
             data_inner, label="Coluna de Data (padrão)",
             values=["Auto-detectar", "Date", "Datetime", "Timestamp",
-                    "date", "datetime", "timestamp", "Data"],
+                    "date", "datetime", "timestamp", "Data",
+                    "data_hora", "data_hora_dt"],
             default="Auto-detectar",
             command=self._on_setting_change)
         self.date_col.pack(fill="x", pady=(0, Spacing.MD))

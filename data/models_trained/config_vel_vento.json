@@ -1,0 +1,25 @@
+{
+  "feature_cols": [
+    "hour",
+    "month",
+    "day",
+    "dayofweek",
+    "hour_sin",
+    "hour_cos",
+    "month_sin",
+    "month_cos",
+    "lag_1",
+    "lag_2",
+    "lag_6",
+    "lag_12",
+    "lag_day",
+    "rolling_mean_1h",
+    "rolling_std_1h",
+    "rolling_mean_6h"
+  ],
+  "target": "vel_vento",
+  "steps_per_day": 288,
+  "trained_at": "2026-06-01T14:30:53.265380",
+  "train_samples": 42500,
+  "val_samples": 7500
+}

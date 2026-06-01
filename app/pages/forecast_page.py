@@ -1,4 +1,7 @@
 import threading
+import os
+import json
+import pickle
 import numpy as np
 import pandas as pd
 import customtkinter as ctk
@@ -132,6 +135,16 @@ class ForecastPage(ctk.CTkFrame):
                      color=Colors.BG_CARD_HOVER,
                      hover_color=Colors.DANGER,
                      command=self._reset_model, width=120).pack(side="left")
+
+        # Load pre-trained model button
+        btn_row_load = ctk.CTkFrame(left_inner, fg_color="transparent")
+        btn_row_load.pack(fill="x", pady=(Spacing.SM, 0))
+
+        ActionButton(btn_row_load, text="Carregar Modelo Treinado", icon="📦",
+                     color=Colors.ACCENT_EMERALD,
+                     hover_color="#059669",
+                     command=self._load_pretrained_model, width=260).pack(
+                         side="left")
 
         # Right: Prediction config
         right_card = ctk.CTkFrame(config_row, fg_color=Colors.BG_CARD,
@@ -325,7 +338,7 @@ class ForecastPage(ctk.CTkFrame):
         # Check date column
         date_col = state.get("csv_date_col", "Auto-detectar")
         if date_col == "Auto-detectar":
-            possible = [c for c in df.columns if any(x in c.lower() for x in ["date", "time", "timestamp", "data"])]
+            possible = [c for c in df.columns if any(x in c.lower() for x in ["date", "time", "timestamp", "data_hora", "data"])]
             date_col = possible[0] if possible else None
 
         # Start background training thread
@@ -343,7 +356,7 @@ class ForecastPage(ctk.CTkFrame):
             
             # Simple wrapper to write logs to our console box safely from thread
             def log_fn(msg):
-                self.app.root.after(0, lambda: self.console.log(msg))
+                self.app.after(0, lambda: self.console.log(msg))
 
             forecaster.train(df, target, date_col, log_fn)
 
@@ -363,14 +376,14 @@ class ForecastPage(ctk.CTkFrame):
                 # Refresh page state
                 self._refresh_state()
 
-            self.app.root.after(0, on_success)
+            self.app.after(0, on_success)
 
         except Exception as e:
             def on_failure():
                 self.model_badge.set_status("error", "FALHA")
                 self.console.log(f"\n❌ ERRO durante o treinamento: {e}")
                 self.console.log("━" * 50)
-            self.app.root.after(0, on_failure)
+            self.app.after(0, on_failure)
 
     def _reset_model(self):
         """Reset model training state."""
@@ -565,4 +578,131 @@ class ForecastPage(ctk.CTkFrame):
         canvas = FigureCanvasTkAgg(fig, master=self.results_card)
         canvas.draw()
         canvas.get_tkwidget().pack(fill="both", expand=True, padx=Spacing.MD, pady=Spacing.MD)
+
+    def _load_pretrained_model(self):
+        """Load a pre-trained model from data/models_trained/ directory."""
+        if not self.app:
+            return
+
+        import sys
+        if hasattr(sys, '_MEIPASS'):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            
+        models_dir = os.path.join(base_path, "data", "models_trained")
+
+        if not os.path.isdir(models_dir):
+            self.console.log("━" * 50)
+            self.console.log("❌ Pasta de modelos não encontrada.")
+            self.console.log(f"   Esperado: {models_dir}")
+            self.console.log("   → Execute train_model.py primeiro para gerar os modelos.")
+            self.console.log("━" * 50)
+            return
+
+        # Detect available trained models
+        config_files = sorted([f for f in os.listdir(models_dir) if f.startswith('config_') and f.endswith('.json')])
+
+        if not config_files:
+            self.console.log("❌ Nenhum modelo treinado encontrado na pasta.")
+            return
+
+        # Extract variable names
+        available_vars = []
+        for cf in config_files:
+            var_name = cf.replace('config_', '').replace('.json', '')
+            xgb_path = os.path.join(models_dir, f"xgboost_{var_name}.pkl")
+            if os.path.exists(xgb_path):
+                available_vars.append(var_name)
+
+        if not available_vars:
+            self.console.log("❌ Nenhum modelo completo encontrado (faltam arquivos .pkl).")
+            return
+
+        self.console.log("━" * 50)
+        self.console.log("📦 Modelos pré-treinados encontrados:")
+
+        loaded_models = {}
+        for var_name in available_vars:
+            try:
+                # Load config
+                config_path = os.path.join(models_dir, f"config_{var_name}.json")
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+
+                # Load XGBoost
+                xgb_path = os.path.join(models_dir, f"xgboost_{var_name}.pkl")
+                with open(xgb_path, 'rb') as f:
+                    xgb_model = pickle.load(f)
+
+                # Load scalers
+                scalers_path = os.path.join(models_dir, f"scalers_{var_name}.pkl")
+                with open(scalers_path, 'rb') as f:
+                    scalers = pickle.load(f)
+
+                # Load LSTM (optional)
+                lstm_model = None
+                lstm_path = os.path.join(models_dir, f"lstm_{var_name}.keras")
+                if os.path.exists(lstm_path):
+                    try:
+                        from tensorflow.keras.models import load_model
+                        lstm_model = load_model(lstm_path)
+                    except Exception:
+                        pass
+
+                loaded_models[var_name] = {
+                    'config': config,
+                    'xgb': xgb_model,
+                    'lstm': lstm_model,
+                    'scaler_X': scalers['scaler_X'],
+                    'scaler_y': scalers['scaler_y'],
+                }
+
+                trained_at = config.get('trained_at', 'N/A')[:19]
+                has_lstm = '✅' if lstm_model else '❌'
+                self.console.log(f"  ✅ {var_name}: XGBoost ✅ | LSTM {has_lstm} | Treinado em {trained_at}")
+
+            except Exception as e:
+                self.console.log(f"  ⚠️ {var_name}: erro ao carregar — {e}")
+
+        if not loaded_models:
+            self.console.log("❌ Não foi possível carregar nenhum modelo.")
+            return
+
+        # Store in app state
+        state = self.app.app_state
+        state["pretrained_models"] = loaded_models
+        state["model_trained"] = True
+        state["model_type"] = "Pré-treinado"
+
+        # Create a wrapper forecaster for the first variable
+        first_var = available_vars[0]
+        forecaster = ClimaiaForecaster(model_type="XGBoost", epochs=0)
+        forecaster.xgb_model = loaded_models[first_var]['xgb']
+        forecaster.lstm_model = loaded_models[first_var].get('lstm')
+        forecaster.scaler_X = loaded_models[first_var]['scaler_X']
+        forecaster.scaler_y = loaded_models[first_var]['scaler_y']
+        forecaster.feature_cols = loaded_models[first_var]['config']['feature_cols']
+        forecaster.steps_in_day = loaded_models[first_var]['config'].get('steps_per_day', 288)
+        state["forecaster"] = forecaster
+        state["forecast_target"] = first_var
+
+        # Update UI
+        self.model_badge.set_status("ready", f"PRÉ-TREINADO ({len(loaded_models)} vars)")
+        self.check_labels["model"].configure(text="✅")
+
+        # Update target variable dropdown with available vars
+        var_options = available_vars + ["Todas"]
+        self.target_var.option.configure(values=var_options)
+        self.target_var.option.set(first_var)
+
+        # Skip analysis prerequisite for pre-trained models
+        self.check_labels["analysis"].configure(text="✅")
+        state["analysis_ran"] = True
+
+        self.console.log(f"\n🎉 {len(loaded_models)} modelo(s) carregado(s) com sucesso!")
+        self.console.log("   Agora você pode executar previsões diretamente.")
+        self.console.log("━" * 50)
+
+        self.app.log(f"Modelos pré-treinados carregados: {', '.join(available_vars)}")
 
