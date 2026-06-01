@@ -8,8 +8,8 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![CustomTkinter](https://img.shields.io/badge/CustomTkinter-5.2+-1e293b?style=flat-square)
-![Pandas](https://img.shields.io/badge/Pandas-2.0+-150458?style=flat-square&logo=pandas&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Conclu%C3%ADdo-10b981?style=flat-square)
+![Pandas](https://img.shields.io/badge/Pandas-3.0+-150458?style=flat-square&logo=pandas&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Produção-10b981?style=flat-square)
 
 </div>
 
@@ -19,33 +19,34 @@
 
 **CLIMAIA** é um software desktop premium desenvolvido para prever, identificar e validar eventos climáticos extremos com base na análise comparativa de dados meteorológicos brutos e pré-processados (tratados).
 
-O projeto combina **Deep Learning** (LSTM), **Machine Learning** (XGBoost) e **modelos estatísticos clássicos** (EVT, Gumbel, Z-Score) para avaliar séries temporais climáticas e detectar anomalias no tratamento de dados.
+O projeto combina **Deep Learning** (Redes Neurais Recorrentes LSTM), **Machine Learning** (XGBoost Ensemble) e **Modelos Estatísticos Clássicos** (EVT, Gumbel, Z-Score) para avaliar séries temporais climáticas e detectar anomalias no tratamento de dados.
 
 ## 🎯 Principais Objetivos
 
-1. **Previsão de Eventos Extremos:** Modelos preditivos para antecipar ocorrências climáticas críticas.
+1. **Previsão de Eventos Extremos:** Modelos preditivos já pré-treinados para antecipar ocorrências climáticas críticas (Temperatura, Radiação, Umidade e Velocidade do Vento).
 2. **Avaliação da Integridade dos Dados:** Validação do impacto de tratamentos de dados (interpolação/limpeza) comparando eventos extremos entre série bruta e tratada.
    - Os eventos são criados artificialmente pela interpolação?
    - Os eventos extremos reais são suprimidos durante o tratamento?
-3. **Software Desktop Premium:** Aplicação com interface moderna, dark mode e componentes reutilizáveis para visualização profissional de resultados.
+3. **Software Desktop Premium:** Aplicação com interface moderna, dark mode, e suporte nativo para tabelas `.xlsx` e `.csv` (padrão brasileiro).
 
 ---
 
 ## 🚀 Como Executar e Testar
 
-Siga as instruções abaixo de acordo com o seu sistema operacional. O sistema configurará as bibliotecas automaticamente.
+O projeto foi inteiramente desenhado para oferecer uma experiência "Zero Config" para o usuário final no sistema Windows.
 
 ### 🪟 Windows (Método Recomendado)
 
-Se você baixou este código no Windows, você pode rodar o sistema diretamente ou gerar o seu executável `.exe` final.
+Se você baixou este código no Windows, você pode rodar o sistema nativamente usando os scripts automatizados fornecidos. Não é necessário mexer no terminal.
 
 1. Baixe e instale o **Python** (certifique-se de marcar a opção "Add Python to PATH" durante a instalação).
 2. Para **Apenas Testar/Rodar** a interface:
    - Dê um duplo clique no arquivo **`run_windows.bat`**. 
-   - Ele criará o ambiente virtual sozinho, instalará as dependências e abrirá a interface na tela.
+   - Ele criará o ambiente virtual isolado, instalará as dependências (`requirements.txt`) e abrirá a interface na tela.
 3. Para **Gerar o Executável (.exe)** final:
    - Dê um duplo clique no arquivo **`build_windows.bat`**.
-   - Aguarde o processo terminar. O seu aplicativo final estará dentro da pasta `dist/` com o nome `CLIMAIA.exe`.
+   - O processo irá empacotar todos os scripts, dependências e **os modelos de Inteligência Artificial pré-treinados** em um único executável portátil.
+   - O seu aplicativo final estará dentro da pasta `dist/` com o nome `CLIMAIA.exe`.
 
 ### 🐧 Linux / Mac (Terminal)
 
@@ -72,12 +73,24 @@ python main.py
 
 ---
 
+## 🧠 Modelos de Inteligência Artificial Inclusos
+
+O sistema já é distribuído com **16 modelos e artefatos pré-treinados** integrados na pasta `data/models_trained/`. Estes modelos foram treinados sobre 4 anos de dados meteorológicos para 4 variáveis distintas:
+- **Temperatura (°C)**
+- **Velocidade do Vento (m/s)**
+- **Umidade Relativa (%)**
+- **Radiação Solar (W/m²)**
+
+Para retreinar os modelos com dados atualizados no futuro, cientistas de dados podem utilizar o script offline de pipeline `train_model.py`.
+
+---
+
 ## 🔬 Como Funciona
 
-1. **Ingestão de Dados:** Carregue os CSVs brutos e tratados na aba "Dados".
+1. **Ingestão de Dados:** Carregue os dados brutos e tratados na aba "Dados". O sistema aceita `.xlsx` nativamente e auto-detecta `.csv` com separadores em ponto-e-vírgula.
 2. **Detecção Estatística:** Configure o método (EVT, Gumbel, Z-Score, Percentil, IQR) na aba "Análise" para identificar eventos extremos.
-3. **Comparação Analítica:** A aba "Comparação" audita as diferenças entre as detecções nos dados brutos vs tratados.
-4. **Previsão com IA:** Treine modelos LSTM/XGBoost para prever eventos extremos futuros.
+3. **Comparação Analítica:** A aba "Comparação" audita as diferenças entre as detecções nos dados brutos vs tratados gerando um laudo de impacto da interpolação.
+4. **Previsão com IA:** Na aba "Previsão", selecione "Carregar Modelo Treinado" para executar inferências instantâneas usando a IA empacotada sem travar o processamento da interface.
 
 ---
 
@@ -92,31 +105,31 @@ python main.py
 - Definição da arquitetura e escopo do projeto.
 - Análise de viabilidade matemática dos modelos (EVT vs Gumbel).
 - Estudo dos scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`).
-- Criação do repositório, documentação inicial e definição da stack tecnológica.
 
 ### 🎨 10/05/2026 a 12/05/2026 — Arquitetura de Interface (Fase 1A)
-- Pesquisa de referências visuais (Dark Mode, UI Premium, Dashboard).
-- Implementação do **Design System** (`theme.py`) e componentes reaproveitáveis (StatCards, Botões Animados).
-- Criação das 6 abas principais do sistema integradas a um menu lateral.
+- Pesquisa de referências visuais e implementação do **Design System** (`theme.py`).
+- Criação das 6 abas principais do sistema integradas a um menu lateral CustomTkinter.
 
 ### 🧠 14/05/2026 a 16/05/2026 — Lógica de Estado e Matemática
-- Desenvolvimento do **Estado Centralizado** (Single Source of Truth) para sincronizar dados entre as telas.
-- Implementação dos algoritmos estatísticos puros (`extreme_detection.py`), validando a sensibilidade do Z-Score e do Range Interquartil (IQR).
+- Desenvolvimento do **Estado Centralizado** para sincronizar dados entre as telas.
+- Implementação dos algoritmos estatísticos puros (`extreme_detection.py`), validando a sensibilidade do Z-Score e do IQR.
 
-### ⚙️ 19/05/2026 a 21/05/2026 — Motores de Comparação e IA
+### ⚙️ 19/05/2026 a 21/05/2026 — Motores de Comparação e IA Preditiva
 - Criação do "Motor Analítico" para gerar o laudo de discrepância (Bruto vs Tratado).
 - Modelagem preditiva com Redes Neurais (**LSTM**) e **XGBoost** (`forecaster.py`).
-- Implementação de sub-processos (threading) para evitar que a interface travasse durante o treinamento da Inteligência Artificial.
+- Implementação de sub-processos (threading) para manter a fluidez da GUI.
 
-### 📊 23/05/2026 a 25/05/2026 — Visualização de Dados e Refinamentos
-- Integração da biblioteca Matplotlib no framework gráfico para plotagem interativa.
-- Cálculos de limite de confiança e renderização visual das bandas de incerteza da previsão (sombreamento nos gráficos).
-- Testes exaustivos de Experiência do Usuário (UX): inserção de validações de pré-requisitos e painéis de aviso amigáveis.
+### 📊 23/05/2026 a 25/05/2026 — Visualização e Testes de UX
+- Integração do Matplotlib no framework gráfico para plotagem interativa.
+- Cálculos de limite de confiança e renderização visual das bandas de incerteza da previsão.
 
-### 🚀 26/05/2026 — Empacotamento e Entrega (Deploy)
-- Criação dos scripts automatizados (`.bat`) para uso facilitado por leigos no Windows.
-- Auditoria final de código e refatoração do `.spec` para o PyInstaller garantir a compatibilidade cruzada das bibliotecas pesadas.
-- Sistema 100% testado, finalizado e com código-fonte empurrado para produção.
+### 🚀 26/05/2026 — Empacotamento Inicial Windows
+- Criação dos scripts automatizados (`run_windows.bat`, `build_windows.bat`) para uso facilitado.
+
+### 🛡️ 01/06/2026 — Auditoria Final, Dados Reais e Integração Contínua
+- Treinamento final dos modelos LSTM e XGBoost com os anos 2022 a 2025 (`train_model.py`).
+- Inclusão nativa de suporte a planilhas `.xlsx` e parsing de datas em formato Brasileiro.
+- Refatoração do PyInstaller (`_MEIPASS`) para empacotar os 16 modelos pré-treinados dentro do executável (`.exe`) permitindo a entrega em produção.
 
 ---
 
@@ -128,7 +141,8 @@ Fase 2 (Motor Estatístico de Eventos): █████████████�
 Fase 3 (Modelagem LSTM/XGBoost):       ██████████████████████████████ 100% ✅
 Fase 4 (Comparador Bruto vs Tratado):  ██████████████████████████████ 100% ✅
 Fase 5 (Gráficos e Laudos):            ██████████████████████████████ 100% ✅
-Fase 6 (Scripts Windows & Setup):      ██████████████████████████████ 100% ✅
+Fase 6 (Suporte XLSX e Arquivos Brutos)██████████████████████████████ 100% ✅
+Fase 7 (Empacotamento IA p/ Windows):  ██████████████████████████████ 100% ✅
 ```
 
 ---
