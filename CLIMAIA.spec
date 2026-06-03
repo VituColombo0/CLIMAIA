@@ -2,6 +2,23 @@
 
 block_cipher = None
 
+# Detect optional TensorFlow at build time
+_hidden = [
+    'customtkinter',
+    'pandas',
+    'numpy',
+    'matplotlib',
+    'xgboost',
+    'scipy',
+    'sklearn',
+]
+
+try:
+    import tensorflow
+    _hidden.append('tensorflow')
+except ImportError:
+    pass
+
 a = Analysis(
     ['main.py'],
     pathex=[],
@@ -11,16 +28,7 @@ a = Analysis(
         ('src', 'src'),
         ('data', 'data'),
     ],
-    hiddenimports=[
-        'customtkinter',
-        'pandas',
-        'numpy',
-        'matplotlib',
-        'xgboost',
-        'tensorflow',
-        'scipy',
-        'sklearn'
-    ],
+    hiddenimports=_hidden,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -55,3 +63,4 @@ exe = EXE(
     entitlements_file=None,
     icon='NONE', # Add path to icon.ico if you have one
 )
+

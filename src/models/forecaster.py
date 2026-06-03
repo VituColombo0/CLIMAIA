@@ -1,6 +1,10 @@
 """
 CLIMAIA – AI Prediction and Training Engine
 Implements training and inference for LSTM, XGBoost, and Ensemble models.
+
+TensorFlow/Keras is OPTIONAL. If not installed, LSTM training is disabled
+and only XGBoost models are available.  This keeps the application usable
+on Python versions where TensorFlow is not yet supported (e.g. 3.13+).
 """
 
 import os
@@ -8,14 +12,31 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from xgboost import XGBRegressor
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import Callback
-import tensorflow as tf
 
-# Disable TensorFlow verbose logs
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# ── Optional TensorFlow / Keras imports ───────────────────────────────────────
+_TF_AVAILABLE = False
+try:
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+    import tensorflow as tf
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import LSTM, Dense
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.callbacks import Callback
+    _TF_AVAILABLE = True
+except ImportError:
+    tf = None
+    Sequential = None
+    # Provide a no-op Callback stub so GUIProgressCallback can still be defined
+    class _StubCallback:
+        """Placeholder when Keras is unavailable."""
+        def __init__(self, *a, **kw):
+            pass
+    Callback = _StubCallback
+
+
+def is_tensorflow_available() -> bool:
+    """Return True when TensorFlow is importable and functional."""
+    return _TF_AVAILABLE
 
 
 class GUIProgressCallback(Callback):
@@ -114,8 +135,20 @@ class ClimaiaForecaster:
             X_train, X_val = X_scaled[:-val_size], X_scaled[-val_size:]
             y_train, y_val = y_scaled[:-val_size], y_scaled[-val_size:]
 
+        # ── Determine effective model type ────────────────────────────────
+        wants_lstm = "LSTM" in self.model_type or "Ensemble" in self.model_type
+        wants_xgb = "XGBoost" in self.model_type or "Ensemble" in self.model_type
+
+        # Fallback: if user asked for LSTM but TF is not available, use XGBoost
+        if wants_lstm and not _TF_AVAILABLE:
+            console_log_fn("  ⚠️ TensorFlow não está instalado nesta máquina.")
+            console_log_fn("     (Python 3.13+ ainda não é suportado pelo TensorFlow)")
+            console_log_fn("  ↳ Usando XGBoost como alternativa.")
+            wants_lstm = False
+            wants_xgb = True
+
         # Train XGBoost
-        if "XGBoost" in self.model_type or "Ensemble" in self.model_type:
+        if wants_xgb:
             console_log_fn("  ⚡ Treinando modelo XGBoost...")
             self.xgb_model = XGBRegressor(n_estimators=100, max_depth=5, learning_rate=0.08, random_state=42)
             self.xgb_model.fit(X_train, y_train)
@@ -127,7 +160,7 @@ class ClimaiaForecaster:
             console_log_fn("  ✅ XGBoost treinado com sucesso.")
 
         # Train LSTM
-        if "LSTM" in self.model_type or "Ensemble" in self.model_type:
+        if wants_lstm and _TF_AVAILABLE:
             console_log_fn("  🧠 Treinando rede neural LSTM...")
             
             # Reshape for LSTM: [samples, time steps, features]
@@ -203,6 +236,12 @@ class ClimaiaForecaster:
         alpha = 1.0 - (confidence_level / 100.0)
         from scipy import stats
         z_critical = stats.norm.ppf(1.0 - alpha / 2.0)
+
+        # Determine effective model for prediction
+        # If model_type is LSTM/Ensemble but LSTM is None, fall back to XGBoost
+        effective_type = self.model_type
+        if effective_type in ("LSTM", "Ensemble") and self.lstm_model is None:
+            effective_type = "XGBoost"
         
         for i, f_date in enumerate(future_dates):
             # Extract time features
@@ -232,12 +271,12 @@ class ClimaiaForecaster:
             # Model predictions (scaled)
             pred_val_scaled = 0.0
             
-            if self.model_type == "XGBoost" and self.xgb_model:
+            if effective_type == "XGBoost" and self.xgb_model:
                 pred_val_scaled = float(self.xgb_model.predict(feat_scaled)[0])
-            elif self.model_type == "LSTM" and self.lstm_model:
+            elif effective_type == "LSTM" and self.lstm_model:
                 feat_lstm = np.reshape(feat_scaled, (1, 1, feat_scaled.shape[1]))
                 pred_val_scaled = float(self.lstm_model.predict(feat_lstm, verbose=0)[0][0])
-            elif self.model_type == "Ensemble" and self.xgb_model and self.lstm_model:
+            elif effective_type == "Ensemble" and self.xgb_model and self.lstm_model:
                 p_xgb = float(self.xgb_model.predict(feat_scaled)[0])
                 feat_lstm = np.reshape(feat_scaled, (1, 1, feat_scaled.shape[1]))
                 p_lstm = float(self.lstm_model.predict(feat_lstm, verbose=0)[0][0])

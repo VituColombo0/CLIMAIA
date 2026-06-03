@@ -26,6 +26,15 @@ from datetime import datetime
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# Check TensorFlow availability (optional dep — not available on Python 3.13+)
+_TF_AVAILABLE = False
+try:
+    import tensorflow as _tf
+    _TF_AVAILABLE = True
+    del _tf
+except ImportError:
+    pass
+
 # ─── Configuration ────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -345,7 +354,11 @@ def train_xgboost(X_train, y_train, X_val, y_val, var_name):
 
 
 def train_lstm(X_train, y_train, X_val, y_val, var_name, scaler_X, scaler_y):
-    """Train LSTM model."""
+    """Train LSTM model. Requires TensorFlow."""
+    if not _TF_AVAILABLE:
+        log(f"TensorFlow indisponível — LSTM para '{var_name}' não será treinado.", "WARN")
+        return None, None
+
     import tensorflow as tf
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import LSTM, Dense, Dropout
@@ -456,38 +469,43 @@ def train_all_models(dataset):
         with open(xgb_path, 'wb') as f:
             pickle.dump(xgb_model, f)
         
-        # ── Train LSTM ──
+        # ── Train LSTM (optional — requires TensorFlow) ──
         scaler_X = MinMaxScaler()
         scaler_y = MinMaxScaler()
         
         lstm_model, lstm_metrics = train_lstm(X_train, y_train, X_val, y_val, var, scaler_X, scaler_y)
-        var_results['lstm'] = lstm_metrics
         
-        # Save LSTM + scalers
-        lstm_path = os.path.join(MODELS_DIR, f"lstm_{var}.keras")
-        lstm_model.save(lstm_path)
+        if lstm_model is not None:
+            var_results['lstm'] = lstm_metrics
+            
+            # Save LSTM + scalers
+            lstm_path = os.path.join(MODELS_DIR, f"lstm_{var}.keras")
+            lstm_model.save(lstm_path)
+        else:
+            log(f"  LSTM ignorado para '{var}' (TensorFlow indisponível)", "WARN")
         
         scalers_path = os.path.join(MODELS_DIR, f"scalers_{var}.pkl")
         with open(scalers_path, 'wb') as f:
             pickle.dump({'scaler_X': scaler_X, 'scaler_y': scaler_y}, f)
         
-        # ── Ensemble metrics ──
-        from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-        
-        X_val_sc = scaler_X.transform(X_val)
-        X_val_3d = X_val_sc.reshape((X_val_sc.shape[0], 1, X_val_sc.shape[1]))
-        
-        y_xgb = xgb_model.predict(X_val)
-        y_lstm_sc = lstm_model.predict(X_val_3d, verbose=0).flatten()
-        y_lstm = scaler_y.inverse_transform(y_lstm_sc.reshape(-1, 1)).flatten()
-        
-        y_ensemble = 0.5 * y_xgb + 0.5 * y_lstm
-        ens_rmse = np.sqrt(mean_squared_error(y_val, y_ensemble))
-        ens_mae = mean_absolute_error(y_val, y_ensemble)
-        ens_r2 = r2_score(y_val, y_ensemble)
-        
-        var_results['ensemble'] = {'rmse': ens_rmse, 'mae': ens_mae, 'r2': ens_r2}
-        log(f"  Ensemble '{var}': RMSE={ens_rmse:.4f} | MAE={ens_mae:.4f} | R²={ens_r2:.4f}", "OK")
+        # ── Ensemble metrics (only if LSTM was trained) ──
+        if lstm_model is not None:
+            from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+            
+            X_val_sc = scaler_X.transform(X_val)
+            X_val_3d = X_val_sc.reshape((X_val_sc.shape[0], 1, X_val_sc.shape[1]))
+            
+            y_xgb = xgb_model.predict(X_val)
+            y_lstm_sc = lstm_model.predict(X_val_3d, verbose=0).flatten()
+            y_lstm = scaler_y.inverse_transform(y_lstm_sc.reshape(-1, 1)).flatten()
+            
+            y_ensemble = 0.5 * y_xgb + 0.5 * y_lstm
+            ens_rmse = np.sqrt(mean_squared_error(y_val, y_ensemble))
+            ens_mae = mean_absolute_error(y_val, y_ensemble)
+            ens_r2 = r2_score(y_val, y_ensemble)
+            
+            var_results['ensemble'] = {'rmse': ens_rmse, 'mae': ens_mae, 'r2': ens_r2}
+            log(f"  Ensemble '{var}': RMSE={ens_rmse:.4f} | MAE={ens_mae:.4f} | R²={ens_r2:.4f}", "OK")
         
         # Save feature columns config
         config_path = os.path.join(MODELS_DIR, f"config_{var}.json")

@@ -97,12 +97,29 @@ class ForecastPage(ctk.CTkFrame):
                      text_color=Colors.TEXT_PRIMARY).pack(fill="x",
                          pady=(0, Spacing.MD))
 
+        # Determine available models based on TensorFlow availability
+        from src.models.forecaster import is_tensorflow_available
+        if is_tensorflow_available():
+            model_options = ["LSTM (Redes Neurais)", "XGBoost (Gradient Boosting)",
+                             "Ensemble (LSTM + XGBoost)"]
+            default_model = "LSTM (Redes Neurais)"
+        else:
+            model_options = ["XGBoost (Gradient Boosting)"]
+            default_model = "XGBoost (Gradient Boosting)"
+
         self.model_select = LabeledOptionMenu(
             left_inner, label="Modelo",
-            values=["LSTM (Redes Neurais)", "XGBoost (Gradient Boosting)",
-                    "Ensemble (LSTM + XGBoost)"],
-            default="LSTM (Redes Neurais)")
+            values=model_options,
+            default=default_model)
         self.model_select.pack(fill="x", pady=(0, Spacing.MD))
+
+        # Show TF warning if unavailable
+        if not is_tensorflow_available():
+            tf_warn = ctk.CTkLabel(
+                left_inner,
+                text="⚠️ TensorFlow indisponível — apenas XGBoost disponível",
+                font=Fonts.TINY, text_color=Colors.ACCENT_WARM, anchor="w")
+            tf_warn.pack(fill="x", pady=(0, Spacing.SM))
 
         # Epochs / iterations
         self.epochs_entry = LabeledEntry(
@@ -640,13 +657,17 @@ class ForecastPage(ctk.CTkFrame):
                 with open(scalers_path, 'rb') as f:
                     scalers = pickle.load(f)
 
-                # Load LSTM (optional)
+                # Load LSTM (optional — requires TensorFlow)
                 lstm_model = None
                 lstm_path = os.path.join(models_dir, f"lstm_{var_name}.keras")
                 if os.path.exists(lstm_path):
                     try:
-                        from tensorflow.keras.models import load_model
-                        lstm_model = load_model(lstm_path)
+                        from src.models.forecaster import is_tensorflow_available
+                        if is_tensorflow_available():
+                            from tensorflow.keras.models import load_model
+                            lstm_model = load_model(lstm_path)
+                        else:
+                            self.console.log(f"    ⚠️ TensorFlow indisponível — LSTM de '{var_name}' ignorado (XGBoost será usado).")
                     except Exception:
                         pass
 
