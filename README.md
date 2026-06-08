@@ -94,6 +94,44 @@ Para retreinar os modelos com dados atualizados no futuro, cientistas de dados p
 
 ---
 
+## 🕹️ Guia de Uso da Interface
+
+O CLIMAIA foi projetado para ter um fluxo de trabalho progressivo, navegando pelas abas laterais da esquerda para a direita (ou de cima para baixo).
+
+### 1. 📂 Aba: Dados
+Nesta tela você carrega os arquivos meteorológicos.
+- **Selecionar Arquivo**: Permite escolher um arquivo `.csv` ou `.xlsx` no seu computador. Faça isso para os "Dados Brutos" (originais, com falhas) e para os "Dados Tratados" (após processos de limpeza e interpolação).
+- **Limpar**: Remove os dados carregados da memória para aquela categoria.
+
+### 2. 🧮 Aba: Análise
+Aqui você identifica as anomalias e eventos climáticos extremos.
+- **Opções de Variáveis**: Marque quais variáveis climáticas (ex: Temperatura, Vento, Radiação) você deseja analisar.
+- **Configuração do Algoritmo**: Ajuste os parâmetros matemáticos, como a escolha entre o método **Gumbel**, **Z-Score** ou **IQR** (Limites de Quartis).
+- **Executar Análise**: Inicia o processamento estatístico para buscar picos anormais nos dados.
+- **Limpar Console**: Apaga o painel de log de eventos.
+
+### 3. ⚖️ Aba: Comparação
+Cruza os resultados obtidos da Análise entre os Dados Brutos e os Tratados.
+- **Executar Comparação**: Gera um relatório e gráficos que demonstram se o seu método de "Tratamento de Dados" foi prejudicial (ex: se o preenchimento de nulos criou eventos extremos artificiais, ou se suavizou os verdadeiros).
+- **Exportar Relatório**: Salva o laudo consolidado e a tabela de comparação em formato numérico.
+
+### 4. 🔮 Aba: Previsão
+Módulo dedicado à modelagem preditiva utilizando Machine e Deep Learning.
+- **Variável Alvo**: Escolha qual métrica deseja prever.
+- **Carregar Modelo Pré-treinado**: Ativa o uso das Inteligências Artificiais embutidas no CLIMAIA, acelerando a previsão e dispensando a necessidade de treinar redes neurais do zero no seu próprio computador.
+- **Treinar Novo Modelo**: Para usuários que inseriram novos dados e desejam recalcular os pesos de previsão usando os algoritmos XGBoost/LSTM internamente.
+- **Salvar Modelo**: Exporta o modelo atualmente na memória para arquivos `.json` e `.h5` reutilizáveis.
+- **Executar Previsão**: Avalia o cenário e plota na tela a curva prevista comparada com as faixas de perigo extremo, ajudando na antecipação de riscos.
+
+### 5. ⚙️ Aba: Configurações
+Preferências visuais e de estruturação de dados.
+- **Aparência e Escala**: Altere entre o modo Claro/Escuro ou aplique zoom à interface gráfica.
+- **Importação de CSV**: Em caso de falha no reconhecimento automático (`Auto-detectar`), defina manualmente o Separador, Encoding e o nome exato da Coluna de Data/Hora.
+- **Exportar Dados**: Baixe a sua base de dados atual carregada na memória no formato desejado (CSV, Excel, JSON ou Parquet).
+- **Manutenção (Limpar / Resetar)**: Remove totalmente os arquivos da memória para que você possa analisar planilhas completamente novas, sem fechar o sistema.
+
+---
+
 ## 📅 Linha do Tempo do Projeto (Cronograma)
 
 ```text
