@@ -186,7 +186,7 @@ class ComparisonPage(ctk.CTkFrame):
 
         state = self.app.app_state if self.app else {}
         comp_results = state.get("comparison_results")
-        config = state.get("analysis_config", {})
+        config = state.get("analysis_config") or {}
         vars_to_show = config.get("variables") or []
 
         if not vars_to_show:
@@ -386,7 +386,7 @@ class ComparisonPage(ctk.CTkFrame):
             return
 
         # ── Execute comparison ────────────────────────────────────────────
-        config = state.get("analysis_config", {})
+        config = state.get("analysis_config") or {}
         variables = config.get("variables", [])
         method = config.get("method", "N/A")
 
@@ -470,7 +470,7 @@ class ComparisonPage(ctk.CTkFrame):
             return
 
         try:
-            config = state.get("analysis_config", {})
+            config = state.get("analysis_config") or {}
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write("=" * 60 + "\n")
                 f.write("CLIMAIA - Relatório de Comparação Bruto vs Tratado\n")

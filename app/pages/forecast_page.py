@@ -346,7 +346,7 @@ class ForecastPage(ctk.CTkFrame):
         target = self.target_var.get()
         
         # Get variable list
-        config = state.get("analysis_config", {})
+        config = state.get("analysis_config") or {}
         variables = config.get("variables", [])
         
         if target == "Todas":
