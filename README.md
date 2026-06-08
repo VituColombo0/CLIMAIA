@@ -155,7 +155,7 @@ Central de controle visual e manutenção de memória do software.
 ### 📌 05/05/2026 a 08/05/2026 — Planejamento e Estruturação
 - Definição da arquitetura e escopo do projeto.
 - Análise de viabilidade matemática dos modelos (EVT vs Gumbel).
-- Estudo dos scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`).
+- Estudo e abstração dos algoritmos iniciais de Machine Learning e previsão em base histórica.
 
 ### 🎨 10/05/2026 a 12/05/2026 — Arquitetura de Interface (Fase 1A)
 - Pesquisa de referências visuais e implementação do **Design System** (`theme.py`).
@@ -177,10 +177,11 @@ Central de controle visual e manutenção de memória do software.
 ### 🚀 26/05/2026 — Empacotamento Inicial Windows
 - Criação dos scripts automatizados (`run_windows.bat`, `build_windows.bat`) para uso facilitado.
 
-### 🛡️ 01/06/2026 — Auditoria Final, Dados Reais e Integração Contínua
+### 🛡️ Junho/2026 — Auditoria Final, Otimização e Limpeza
 - Treinamento final dos modelos LSTM e XGBoost com os anos 2022 a 2025 (`train_model.py`).
 - Inclusão nativa de suporte a planilhas `.xlsx` e parsing de datas em formato Brasileiro.
 - Refatoração do PyInstaller (`_MEIPASS`) para empacotar os 16 modelos pré-treinados dentro do executável (`.exe`) permitindo a entrega em produção.
+- Limpeza rigorosa de protótipos de backend e otimização das dependências (`requirements.txt`) garantindo um empacotamento Windows leve e livre de quebras de interface.
 
 ---
 

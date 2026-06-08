@@ -27,7 +27,7 @@ O projeto será dividido em 6 fases principais:
 ### Fase 3: Desenvolvimento do Modelo de IA
 - **Arquitetura Base:** Redes Neurais Recorrentes (LSTM/GRU) ou XGBoost Regressors (conforme os scripts fornecidos).
 - **Treinamento:** Treinar o modelo não apenas para prever o valor da variável, mas também para *classificar* a ocorrência do evento extremo com base no que a modelagem estatística validou.
-- **Integração de Base:** Utilizar as abstrações já presentes em `lstm_only.py` (previsão de vento) e `pv_forecasting.py` (previsão de energia solar) como alicerce.
+- **Integração de Base:** Utilizar as abstrações matemáticas e conceituais de previsão de energia e ventos como alicerce nativo na classe `ClimaiaForecaster`.
 
 ### Fase 4: Comparador Analítico (O Diferencial)
 - Criar o motor de comparação:
@@ -46,7 +46,7 @@ O projeto será dividido em 6 fases principais:
 - Sistema de alertas e relatórios gerados.
 
 ## Log de Atividades
-* **08/05/2026:** Planejamento estrutural do projeto criado. Analisados os scripts base fornecidos (`lstm_only.py`, `pv_forecasting.py`). Criado o repositório inicial e `README.md`. Aguardando validação do plano pelo usuário.
+* **08/05/2026:** Planejamento estrutural do projeto criado. Analisados os algoritmos preditivos base. Criado o repositório inicial e `README.md`. Aguardando validação do plano pelo usuário.
 * **16/05/2026:** Desenvolvida a interface desktop completa do CLIMAIA usando CustomTkinter com dark mode premium. Estrutura criada:
   - **Design System** (`app/theme.py`): Paleta de cores escura com tons indigo/cyan, tipografia e espaçamentos.
   - **Componentes Reutilizáveis** (`app/components.py`): StatCard, NavItem, ActionButton, ConsoleBox, StatusBadge, LabeledEntry, LabeledOptionMenu.

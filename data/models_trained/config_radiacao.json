@@ -19,7 +19,7 @@
   ],
   "target": "radiacao",
   "steps_per_day": 288,
-  "trained_at": "2026-06-01T14:31:16.552321",
+  "trained_at": "2026-06-08T15:45:24.109891",
   "train_samples": 42500,
   "val_samples": 7500
 }

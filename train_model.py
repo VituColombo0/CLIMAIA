@@ -41,21 +41,22 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 MODELS_DIR = os.path.join(DATA_DIR, "models_trained")
 RESULTS_DIR = os.path.join(DATA_DIR, "results")
 
-DOWNLOADS = "/home/lirool/Downloads"
+TREATED_XLSX_DIR = os.path.join(DATA_DIR, "treated_xlsx")
+RAW_DATA_DIR = os.path.join(DATA_DIR, "raw")
 
 # Treated XLSX folders (2023, 2024, 2025)
 TREATED_DIRS = [
-    os.path.join(DOWNLOADS, "2023"),
-    os.path.join(DOWNLOADS, "2024"),
-    os.path.join(DOWNLOADS, "2025"),
+    os.path.join(TREATED_XLSX_DIR, "2023"),
+    os.path.join(TREATED_XLSX_DIR, "2024"),
+    os.path.join(TREATED_XLSX_DIR, "2025"),
 ]
 
 # Raw CSV folders (Dados_Brutos/2022_Bruto ... 2025_Bruto)
 RAW_DIRS = [
-    os.path.join(DOWNLOADS, "Dados_Brutos", "2022_Bruto"),
-    os.path.join(DOWNLOADS, "Dados_Brutos", "2023_Bruto"),
-    os.path.join(DOWNLOADS, "Dados_Brutos", "2024_Bruto"),
-    os.path.join(DOWNLOADS, "Dados_Brutos", "2025_Bruto"),
+    os.path.join(RAW_DATA_DIR, "2022_Bruto"),
+    os.path.join(RAW_DATA_DIR, "2023_Bruto"),
+    os.path.join(RAW_DATA_DIR, "2024_Bruto"),
+    os.path.join(RAW_DATA_DIR, "2025_Bruto"),
 ]
 
 # Target variables to train models for

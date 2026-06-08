@@ -19,7 +19,7 @@
   ],
   "target": "vel_vento",
   "steps_per_day": 288,
-  "trained_at": "2026-06-01T14:30:53.265380",
+  "trained_at": "2026-06-08T15:44:53.370231",
   "train_samples": 42500,
   "val_samples": 7500
 }

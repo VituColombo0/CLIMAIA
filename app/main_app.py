@@ -91,6 +91,9 @@ class CLIMAIAApp(ctk.CTk):
         # ── Show dashboard ────────────────────────────────────────────────
         self.navigate("dashboard")
 
+        # ── Pre-load default datasets ─────────────────────────────────────
+        self._preload_data()
+
     # ──────────────────────────────────────────────────────────────────────
     # Sidebar
     # ──────────────────────────────────────────────────────────────────────
@@ -228,6 +231,43 @@ class CLIMAIAApp(ctk.CTk):
     def get_log_messages(self) -> list:
         """Return all accumulated log messages."""
         return list(self._log_messages)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Data preload
+    # ──────────────────────────────────────────────────────────────────────
+    def _preload_data(self):
+        """Automatically load default raw and treated datasets if they exist."""
+        import os
+        import pandas as pd
+        import threading
+        
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        raw_path = os.path.join(base_dir, "data", "raw", "dataset_bruto.csv")
+        treated_path = os.path.join(base_dir, "data", "treated", "dataset_consolidado.csv")
+        
+        def load_thread():
+            try:
+                if os.path.exists(raw_path):
+                    df_raw = pd.read_csv(raw_path, sep=';')
+                    self.app_state["raw_df"] = df_raw
+                    self.app_state["raw_path"] = raw_path
+                    self.app_state["raw_columns"] = df_raw.columns.tolist()
+                    self.log(f"Dados brutos carregados automaticamente: {os.path.basename(raw_path)}")
+                
+                if os.path.exists(treated_path):
+                    df_treated = pd.read_csv(treated_path, sep=',')
+                    self.app_state["treated_df"] = df_treated
+                    self.app_state["treated_path"] = treated_path
+                    self.app_state["treated_columns"] = df_treated.columns.tolist()
+                    self.log(f"Dados tratados carregados automaticamente: {os.path.basename(treated_path)}")
+                
+                # If we're currently on the data page, force refresh (safely on main thread)
+                if self._current_page == "data" and self._current_page_widget:
+                    self.after(100, self._current_page_widget._restore_state)
+            except Exception as e:
+                self.log(f"Erro ao auto-carregar dados: {e}")
+
+        threading.Thread(target=load_thread, daemon=True).start()
 
     # ──────────────────────────────────────────────────────────────────────
     # State helpers

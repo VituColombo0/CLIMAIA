@@ -19,7 +19,7 @@
   ],
   "target": "temperatura",
   "steps_per_day": 288,
-  "trained_at": "2026-06-01T14:30:15.760176",
+  "trained_at": "2026-06-08T15:44:14.700315",
   "train_samples": 42500,
   "val_samples": 7500
 }
