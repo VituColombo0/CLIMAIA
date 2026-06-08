@@ -39,6 +39,26 @@ if errorlevel 1 (
     echo   Apenas o modelo LSTM estara indisponivel.
     echo ===================================================
     echo.
+) else (
+    echo Verificando se TensorFlow funciona corretamente...
+    python -c "import tensorflow" 2>nul
+    if errorlevel 1 (
+        echo.
+        echo ===================================================
+        echo   AVISO: TensorFlow foi instalado mas NAO funciona.
+        echo   Possivel causa: CPU nao suporta AVX/AVX2 ou
+        echo   Visual C++ Redistributable esta ausente/desatualizado.
+        echo.
+        echo   Removendo TensorFlow para evitar erros no build...
+        echo ===================================================
+        echo.
+        pip uninstall tensorflow -y 2>nul
+        pip uninstall keras -y 2>nul
+        echo   O executavel funcionara com XGBoost.
+        echo   Apenas o modelo LSTM estara indisponivel.
+    ) else (
+        echo   TensorFlow funcionando corretamente!
+    )
 )
 
 echo Instalando PyInstaller...

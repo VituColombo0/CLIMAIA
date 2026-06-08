@@ -33,15 +33,21 @@ echo Tentando instalar TensorFlow (opcional)...
 pip install tensorflow>=2.15.0 --quiet 2>nul
 if errorlevel 1 (
     echo.
-    echo ===================================================
     echo   AVISO: TensorFlow nao foi instalado.
-    echo   Sua versao do Python pode nao ser compativel.
+    echo   Funcionalidade LSTM indisponivel.
     echo   (TensorFlow suporta Python 3.9 a 3.12)
     echo.
-    echo   O CLIMAIA funcionara normalmente usando XGBoost.
-    echo   Apenas o modelo LSTM estara indisponivel.
-    echo ===================================================
-    echo.
+) else (
+    echo Verificando se TensorFlow funciona...
+    python -c "import tensorflow" 2>nul
+    if errorlevel 1 (
+        echo   AVISO: TensorFlow instalado mas NAO funciona.
+        echo   Removendo para evitar erros...
+        pip uninstall tensorflow keras -y --quiet 2>nul
+        echo   Funcionalidade LSTM indisponivel.
+    ) else (
+        echo   TensorFlow OK!
+    )
 )
 
 echo.

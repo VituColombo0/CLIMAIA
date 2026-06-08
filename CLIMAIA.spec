@@ -13,11 +13,22 @@ _hidden = [
     'sklearn',
 ]
 
+# TensorFlow may be installed but broken (e.g. CPU lacks AVX/AVX2,
+# or Visual C++ Redistributable is missing). We must catch ALL
+# exceptions — not just ImportError — to handle DLL load failures.
+_tf_available = False
+_tf_excludes = []
 try:
     import tensorflow
     _hidden.append('tensorflow')
-except ImportError:
-    pass
+    _tf_available = True
+except Exception:
+    # When TF is NOT functional, explicitly exclude it so PyInstaller
+    # does not attempt to walk its broken native modules.
+    _tf_excludes = [
+        'tensorflow', 'tensorflow.python', 'tensorflow.lite',
+        'tensorflow.compiler', 'keras',
+    ]
 
 a = Analysis(
     ['main.py'],
@@ -32,7 +43,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=_tf_excludes,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

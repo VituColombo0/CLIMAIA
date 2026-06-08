@@ -32,7 +32,7 @@ try:
     import tensorflow as _tf
     _TF_AVAILABLE = True
     del _tf
-except ImportError:
+except Exception:
     pass
 
 # ─── Configuration ────────────────────────────────────────────────────────────

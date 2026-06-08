@@ -23,7 +23,7 @@ try:
     from tensorflow.keras.optimizers import Adam
     from tensorflow.keras.callbacks import Callback
     _TF_AVAILABLE = True
-except ImportError:
+except Exception:
     tf = None
     Sequential = None
     # Provide a no-op Callback stub so GUIProgressCallback can still be defined
