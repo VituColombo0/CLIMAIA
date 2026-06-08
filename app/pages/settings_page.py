@@ -429,7 +429,6 @@ class SettingsPage(ctk.CTkFrame):
             return
 
         # Clear all state
-        self._clear_all_data.__wrapped__ = True  # Skip confirmation
         state = self.app.app_state
 
         state["raw_df"] = None

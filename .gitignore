@@ -3,10 +3,13 @@ venv_win/
 __pycache__/
 *.pyc
 
-# Ignore raw/consolidated data files but keep trained models
-data/raw/
-data/treated/
-data/results/
+# Ignore raw/consolidated data files but keep directory structure
+data/raw/*
+data/treated/*
+data/results/*
+!data/raw/.gitkeep
+!data/treated/.gitkeep
+!data/results/.gitkeep
 
 # Keep models_trained/ (tracked by git for deployment)
 # data/models_trained/ is NOT ignored

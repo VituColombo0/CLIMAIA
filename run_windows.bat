@@ -4,6 +4,7 @@ echo   Iniciando CLIMAIA (Modo de Desenvolvimento Windows)
 echo ===================================================
 echo.
 
+REM ── Step 1: Virtual environment ─────────────────────────────────────────────
 echo Verificando ambiente virtual...
 if not exist venv_win (
     echo Criando novo ambiente virtual "venv_win"...
@@ -20,6 +21,7 @@ if not exist venv_win (
 echo Ativando ambiente virtual...
 call venv_win\Scripts\activate.bat
 
+REM ── Step 2: Core dependencies ───────────────────────────────────────────────
 echo Instalando/Atualizando dependencias principais...
 pip install -r requirements.txt --quiet
 if errorlevel 1 (
@@ -29,13 +31,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM ── Step 3: TensorFlow (optional) ───────────────────────────────────────────
 echo Tentando instalar TensorFlow (opcional)...
 pip install tensorflow>=2.15.0 --quiet 2>nul
 if errorlevel 1 (
     echo.
     echo   AVISO: TensorFlow nao foi instalado.
     echo   Funcionalidade LSTM indisponivel.
-    echo   (TensorFlow suporta Python 3.9 a 3.12)
+    echo   ^(TensorFlow suporta Python 3.9 a 3.12^)
     echo.
 ) else (
     echo Verificando se TensorFlow funciona...
@@ -43,13 +46,18 @@ if errorlevel 1 (
     if errorlevel 1 (
         echo   AVISO: TensorFlow instalado mas NAO funciona.
         echo   Removendo para evitar erros...
-        pip uninstall tensorflow keras -y --quiet 2>nul
+        pip uninstall tensorflow -y --quiet 2>nul
+        pip uninstall keras -y --quiet 2>nul
         echo   Funcionalidade LSTM indisponivel.
     ) else (
         echo   TensorFlow OK!
     )
 )
 
+REM ── Step 4: Ensure data directories exist ───────────────────────────────────
+if not exist data\models_trained mkdir data\models_trained
+
+REM ── Step 5: Launch application ──────────────────────────────────────────────
 echo.
 echo Iniciando o CLIMAIA...
 python main.py

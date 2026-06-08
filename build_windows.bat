@@ -4,6 +4,7 @@ echo   Construindo CLIMAIA para Windows (PyInstaller)
 echo ===================================================
 echo.
 
+REM ── Step 1: Virtual environment ─────────────────────────────────────────────
 if not exist venv_win (
     echo 1. Criando ambiente virtual isolado para Windows...
     python -m venv venv_win
@@ -17,6 +18,7 @@ if not exist venv_win (
 
 call venv_win\Scripts\activate.bat
 
+REM ── Step 2: Core dependencies ───────────────────────────────────────────────
 echo 2. Instalando dependencias principais no ambiente virtual...
 pip install -r requirements.txt
 if errorlevel 1 (
@@ -25,6 +27,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM ── Step 3: TensorFlow (optional) ───────────────────────────────────────────
 echo.
 echo Tentando instalar TensorFlow (opcional)...
 pip install tensorflow>=2.15.0 2>nul
@@ -33,7 +36,7 @@ if errorlevel 1 (
     echo ===================================================
     echo   AVISO: TensorFlow nao foi instalado.
     echo   Sua versao do Python pode nao ser compativel.
-    echo   (TensorFlow suporta Python 3.9 a 3.12)
+    echo   ^(TensorFlow suporta Python 3.9 a 3.12^)
     echo.
     echo   O executavel funcionara com XGBoost.
     echo   Apenas o modelo LSTM estara indisponivel.
@@ -61,6 +64,12 @@ if errorlevel 1 (
     )
 )
 
+REM ── Step 4: Ensure data directories exist for PyInstaller ───────────────────
+echo.
+echo Preparando diretorios de dados...
+if not exist data\models_trained mkdir data\models_trained
+
+REM ── Step 5: Install PyInstaller and build ───────────────────────────────────
 echo Instalando PyInstaller...
 pip install pyinstaller
 
