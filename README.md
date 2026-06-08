@@ -94,41 +94,54 @@ Para retreinar os modelos com dados atualizados no futuro, cientistas de dados p
 
 ---
 
-## 🕹️ Guia de Uso da Interface
+## 🕹️ Guia de Uso Detalhado da Interface
 
-O CLIMAIA foi projetado para ter um fluxo de trabalho progressivo, navegando pelas abas laterais da esquerda para a direita (ou de cima para baixo).
+O CLIMAIA foi projetado para ter um fluxo de trabalho progressivo. Navegue pelas abas do menu lateral esquerdo de cima para baixo para realizar a sua análise completa.
 
-### 1. 📂 Aba: Dados
-Nesta tela você carrega os arquivos meteorológicos.
-- **Selecionar Arquivo**: Permite escolher um arquivo `.csv` ou `.xlsx` no seu computador. Faça isso para os "Dados Brutos" (originais, com falhas) e para os "Dados Tratados" (após processos de limpeza e interpolação).
-- **Limpar**: Remove os dados carregados da memória para aquela categoria.
+### 1. 📂 Aba: Dados (Data Ingestion)
+Esta é a porta de entrada do software. Aqui você alimenta o motor do sistema com as bases de dados que deseja avaliar.
+- **Botão "Selecionar Arquivo" (Dados Brutos)**: Clique aqui para abrir a janela de seleção e escolher a sua planilha original (`.csv`, `.xlsx`). Esta planilha deve conter os dados extraídos diretamente dos sensores meteorológicos, possivelmente contendo ruídos, lacunas (dados faltantes) e anomalias.
+- **Botão "Selecionar Arquivo" (Dados Tratados)**: Clique aqui para selecionar a planilha correspondente que já passou por algum processo de limpeza ou interpolação por parte da sua equipe de cientistas de dados.
+- **Comportamento Automático**: Assim que um arquivo é selecionado, o CLIMAIA faz a leitura em background. Se a leitura for bem-sucedida, um badge verde com "CARREGADO" aparecerá. O painel inferior também exibirá automaticamente as 5 primeiras linhas da sua planilha para você conferir se as colunas e as datas foram lidas perfeitamente.
+- **Botões "Limpar" (Ícone de Lixeira)**: Caso tenha carregado o arquivo errado, clique aqui para deletar o *dataframe* apenas deste painel específico da memória RAM, permitindo carregar um novo arquivo.
 
-### 2. 🧮 Aba: Análise
-Aqui você identifica as anomalias e eventos climáticos extremos.
-- **Opções de Variáveis**: Marque quais variáveis climáticas (ex: Temperatura, Vento, Radiação) você deseja analisar.
-- **Configuração do Algoritmo**: Ajuste os parâmetros matemáticos, como a escolha entre o método **Gumbel**, **Z-Score** ou **IQR** (Limites de Quartis).
-- **Executar Análise**: Inicia o processamento estatístico para buscar picos anormais nos dados.
-- **Limpar Console**: Apaga o painel de log de eventos.
+### 2. 🧮 Aba: Análise (Statistical Engine)
+Nesta tela reside o núcleo matemático do CLIMAIA. Ela é responsável por caçar valores que saiam do padrão normal (eventos extremos) nas planilhas carregadas.
+- **Caixas de Seleção "Aplicar Em"**: Você pode marcar se deseja procurar por extremos apenas nos "Dados Brutos", apenas nos "Dados Tratados", ou em ambos simultaneamente.
+- **Opções de Variáveis (Checkboxes)**: Marque explicitamente quais variáveis meteorológicas você quer auditar (ex: *Velocidade do Vento*, *Temperatura*, *Radiação Solar*). O sistema só irá processar as opções marcadas, poupando processamento.
+- **Menu "Método Estatístico"**: Um menu suspenso onde você escolhe o algoritmo matemático que definirá o que é um "extremo":
+  - *Z-Score*: Mede o afastamento em relação à média (ideal para anomalias gerais).
+  - *Gumbel / EVT*: Focado exclusivamente em picos máximos raros, usando a Teoria de Valores Extremos.
+  - *IQR (Interquartil)*: Identifica limites com base em percentis (ótimo para dados com muita variação irregular).
+- **Controle Deslizante (Threshold)**: Permite aumentar ou diminuir a rigidez da matemática (ex: multiplicar o Z-score por 2x, 3x, etc). Quanto maior o valor, mais difícil será um evento ser classificado como "extremo".
+- **Botão "Executar Análise"**: Inicia o processamento pesado. O progresso aparecerá na tela e o **Log de Análise** (console preto na parte inferior) narrará linha a linha quantos extremos foram encontrados.
+- **Botão "Limpar Console"**: Apaga todo o texto do console de log inferior para facilitar a leitura de novas execuções.
 
-### 3. ⚖️ Aba: Comparação
-Cruza os resultados obtidos da Análise entre os Dados Brutos e os Tratados.
-- **Executar Comparação**: Gera um relatório e gráficos que demonstram se o seu método de "Tratamento de Dados" foi prejudicial (ex: se o preenchimento de nulos criou eventos extremos artificiais, ou se suavizou os verdadeiros).
-- **Exportar Relatório**: Salva o laudo consolidado e a tabela de comparação em formato numérico.
+### 3. ⚖️ Aba: Comparação (Audit & Validation)
+Aqui o CLIMAIA funciona como um auditor. Ele cruza os resultados da Aba 2 para descobrir se a sua equipe prejudicou os dados ao tentar "tratá-los".
+- **Painel de Requisitos (Checklist)**: Mostra três selos (Bruto, Tratado, Análise). Se algum deles estiver vermelho (❌), significa que você esqueceu de carregar os dados ou esqueceu de rodar a análise na aba anterior. O botão de comparação ficará bloqueado até que tudo esteja verde (✅).
+- **Botão "Executar Comparação"**: Ao clicar, o sistema desenha gráficos interativos. Ele sobrepõe a linha de tempo dos dados brutos contra os dados tratados. Pontos de divergência extrema serão evidenciados.
+- **Tabela de Laudo (Bottom Panel)**: Exibe uma métrica fundamental dividida por variável:
+  - *Coincidentes*: Eventos extremos que existem em ambos os arquivos (O tratamento manteve a realidade).
+  - *Criados*: O tratamento matemático acidentalmente INVENTOU picos anormais onde não existiam.
+  - *Suprimidos*: O tratamento APAGOU ou suavizou eventos reais que constavam no arquivo bruto.
+- **Botão "Exportar Relatório"**: Salva essas métricas exatas e os painéis numéricos em uma nova tabela CSV no seu computador para prestação de contas.
 
-### 4. 🔮 Aba: Previsão
-Módulo dedicado à modelagem preditiva utilizando Machine e Deep Learning.
-- **Variável Alvo**: Escolha qual métrica deseja prever.
-- **Carregar Modelo Pré-treinado**: Ativa o uso das Inteligências Artificiais embutidas no CLIMAIA, acelerando a previsão e dispensando a necessidade de treinar redes neurais do zero no seu próprio computador.
-- **Treinar Novo Modelo**: Para usuários que inseriram novos dados e desejam recalcular os pesos de previsão usando os algoritmos XGBoost/LSTM internamente.
-- **Salvar Modelo**: Exporta o modelo atualmente na memória para arquivos `.json` e `.h5` reutilizáveis.
-- **Executar Previsão**: Avalia o cenário e plota na tela a curva prevista comparada com as faixas de perigo extremo, ajudando na antecipação de riscos.
+### 4. 🔮 Aba: Previsão (Machine Learning & AI)
+Módulo preditivo e de regressão para tentar descobrir o futuro climático com base no histórico que foi fornecido.
+- **Menu "Variável Alvo"**: Define o que a Inteligência Artificial vai tentar adivinhar (ex: prever a Radiação Solar de amanhã).
+- **Botão "Carregar Modelo Treinado"**: O CLIMAIA já possui 16 cérebros de IA (XGBoost e LSTM) pré-treinados empacotados dentro do arquivo `.exe` e do código fonte. Ao clicar aqui, você ativa essa inteligência instantaneamente sem precisar gastar energia e tempo treinando o seu computador.
+- **Botões de Histórico e Épocas**: Controles deslizantes que dizem para a IA o quanto ela deve olhar para o passado (Histórico de Dias) para tentar adivinhar o futuro.
+- **Botão "Treinar Novo Modelo"**: Utilize este botão **somente** se você tiver inserido planilhas com dados de regiões completamente novas que a IA original desconhece. Ele irá rodar algoritmos de *gradient boosting* no background. O console inferior mostrará o andamento do treinamento (RMSE, MAE e Loss).
+- **Botão "Salvar Modelo"**: Grava os novos cérebros recém-treinados em disco (formato `.json` para árvores, `.h5` para redes neurais).
+- **Botão "Executar Previsão"**: É a ação final. Ele lê os dados mais recentes que você carregou, processa na IA e plota na tela a curva prevista para os próximos dias (conforme escolhido no menu *Horizonte de Previsão*), além de pintar em vermelho se a previsão tocar na faixa que a Aba de Análise classificou como perigo/extremo.
 
-### 5. ⚙️ Aba: Configurações
-Preferências visuais e de estruturação de dados.
-- **Aparência e Escala**: Altere entre o modo Claro/Escuro ou aplique zoom à interface gráfica.
-- **Importação de CSV**: Em caso de falha no reconhecimento automático (`Auto-detectar`), defina manualmente o Separador, Encoding e o nome exato da Coluna de Data/Hora.
-- **Exportar Dados**: Baixe a sua base de dados atual carregada na memória no formato desejado (CSV, Excel, JSON ou Parquet).
-- **Manutenção (Limpar / Resetar)**: Remove totalmente os arquivos da memória para que você possa analisar planilhas completamente novas, sem fechar o sistema.
+### 5. ⚙️ Aba: Configurações (Preferences & Maintenance)
+Central de controle visual e manutenção de memória do software.
+- **Menus "Aparência" e "Escala"**: Altere instantaneamente o software do modo *Escuro* (Dark) para *Claro* (Light) e use o multiplicador de *Escala* (ex: 120%) se estiver utilizando o aplicativo em uma televisão ou monitor de alta resolução para deixar as letras maiores.
+- **Painel de "Importação de CSV"**: Em 90% das vezes o sistema auto-detecta formatos (vírgulas vs ponto-e-vírgula). Se por acaso o seu CSV for carregado na "Aba Dados" como uma única coluna bagunçada, venha aqui e force o **Separador** para `,` ou `;`, defina o **Encoding** (UTF-8 ou ISO-8859-1) e digite o nome exato da **Coluna de Datas**.
+- **Botões "Exportar Ambos / Exportar Tratado"**: Uma funcionalidade extremamente útil. Baixe o *dataframe* finalizado da memória para o seu HD convertendo-o para formatos mais leves e rápidos, como o **Parquet**, ou padronize-os rapidamente para o Excel (`.xlsx`).
+- **Botões "Limpar Dados" e "Resetar Tudo"**: Ações de perigo. Clicar nestes ícones vermelhos funciona como se você tivesse fechado e aberto o programa novamente. Ele limpa todas as variáveis e pesos de IA do Python (`app_state`), poupando sua memória RAM e deixando o CLIMAIA zerado para você analisar o histórico climático de uma cidade nova.
 
 ---
 
