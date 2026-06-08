@@ -187,7 +187,7 @@ class ComparisonPage(ctk.CTkFrame):
         state = self.app.app_state if self.app else {}
         comp_results = state.get("comparison_results")
         config = state.get("analysis_config", {})
-        vars_to_show = config.get("variables", [])
+        vars_to_show = config.get("variables") or []
 
         if not vars_to_show:
             vars_to_show = ["Velocidade do Vento", "Temperatura", "Radiação Solar"]

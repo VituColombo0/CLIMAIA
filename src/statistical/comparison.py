@@ -22,19 +22,24 @@ def compare_event_masks(raw_mask: pd.Series, treated_mask: pd.Series) -> dict:
             coincident: Overlapping events
             created: Events created by treatment
             suppressed: Real events suppressed by treatment
-            agreement_pct: Overlap agreement percentage (Jaccard-like index or simple overlap ratio)
+            agreement_pct: Overlap agreement percentage (Jaccard-like index)
     """
-    # Ensure they are boolean and aligned
-    # If index alignment is possible, align them. Otherwise, slice to same length.
-    if len(raw_mask) != len(treated_mask):
-        min_len = min(len(raw_mask), len(treated_mask))
-        r_arr = raw_mask.values[:min_len]
-        t_arr = treated_mask.values[:min_len]
+    # Convert to boolean numpy arrays, handling type issues
+    try:
+        r_vals = np.asarray(raw_mask, dtype=bool)
+        t_vals = np.asarray(treated_mask, dtype=bool)
+    except (ValueError, TypeError):
+        r_vals = np.asarray(raw_mask.fillna(False), dtype=bool)
+        t_vals = np.asarray(treated_mask.fillna(False), dtype=bool)
+    
+    # Align to same length if different
+    if len(r_vals) != len(t_vals):
+        min_len = min(len(r_vals), len(t_vals))
+        r_arr = r_vals[:min_len]
+        t_arr = t_vals[:min_len]
     else:
-        # Align by index if they are pandas Series
-        combined = pd.DataFrame({'raw': raw_mask, 'treated': treated_mask}).dropna()
-        r_arr = combined['raw'].values
-        t_arr = combined['treated'].values
+        r_arr = r_vals
+        t_arr = t_vals
         
     total_raw = int(np.sum(r_arr))
     total_treated = int(np.sum(t_arr))

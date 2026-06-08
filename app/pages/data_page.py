@@ -244,6 +244,11 @@ class DataPage(ctk.CTkFrame):
                 # Try with settings first, fallback to auto-detect separator
                 try:
                     df = pd.read_csv(filepath, **read_kwargs)
+                    # If auto-detect parsed only 1 column, it likely failed. Try semicolon.
+                    if len(df.columns) == 1 and read_kwargs.get('sep') is None:
+                        df_alt = pd.read_csv(filepath, sep=';')
+                        if len(df_alt.columns) > 1:
+                            df = df_alt
                 except Exception:
                     # Fallback: try semicolon separator (common in BR data)
                     try:

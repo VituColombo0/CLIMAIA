@@ -241,8 +241,10 @@ class AnalysisPage(ctk.CTkFrame):
         self.var_checkboxes = {}
 
         self._var_grid = ctk.CTkFrame(self.var_inner, fg_color="transparent")
-        self._var_grid.pack(fill="x", before=self.var_info_label
-                            if hasattr(self, 'var_info_label') else None)
+        pack_args = {"fill": "x"}
+        if hasattr(self, 'var_info_label') and self.var_info_label.winfo_exists():
+            pack_args["before"] = self.var_info_label
+        self._var_grid.pack(**pack_args)
 
         # Use 3 columns
         cols = 3

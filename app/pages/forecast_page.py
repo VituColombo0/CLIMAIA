@@ -480,10 +480,39 @@ class ForecastPage(ctk.CTkFrame):
 
         # ── Execute forecast ──────────────────────────────────────────────
         horizon = self.horizon.get()
-        target = state.get("forecast_target")
+        
+        # Determine current dataset
+        df = state.get("treated_df") if state.get("treated_df") is not None else state.get("raw_df")
+        
+        # Dynamic target selection for pre-trained models
+        ui_target = self.target_var.get()
+        pretrained = state.get("pretrained_models")
+        
+        if pretrained and ui_target in pretrained:
+            pm = pretrained[ui_target]
+            from src.models.forecaster import ClimaiaForecaster
+            forecaster = ClimaiaForecaster(model_type="XGBoost", epochs=0)
+            forecaster.xgb_model = pm['xgb']
+            forecaster.lstm_model = pm.get('lstm')
+            forecaster.scaler_X = pm['scaler_X']
+            forecaster.scaler_y = pm['scaler_y']
+            forecaster.feature_cols = pm['config']['feature_cols']
+            forecaster.steps_in_day = pm['config'].get('steps_per_day', 288)
+            state["forecaster"] = forecaster
+            state["forecast_target"] = ui_target
+            target = ui_target
+        else:
+            target = state.get("forecast_target")
+            forecaster = state.get("forecaster")
+
         model_type = state.get("model_type", "N/A")
         date_col = state.get("forecast_date_col")
-        forecaster = state["forecaster"]
+        
+        # Fallback for date_col if missing
+        if not date_col or date_col == "Auto-detectar":
+            if df is not None:
+                possible = [c for c in df.columns if any(x in c.lower() for x in ["date", "time", "timestamp", "data_hora", "data"])]
+                date_col = possible[0] if possible else None
 
         self.forecast_status.set_status("running", "EXECUTANDO...")
         self.console.log("━" * 50)
@@ -502,8 +531,6 @@ class ForecastPage(ctk.CTkFrame):
             "Próxima semana": 168,
         }
         hours = horizon_map.get(horizon, 24)
-        
-        df = state.get("treated_df") if state.get("treated_df") is not None else state.get("raw_df")
 
         try:
             # Execute prediction
@@ -555,7 +582,10 @@ class ForecastPage(ctk.CTkFrame):
 
         # Prepare forecast index
         if date_col and date_col in historical_df.columns:
-            pred_x = pd.to_datetime(pred_df['Date'])
+            try:
+                pred_x = pd.to_datetime(pred_df['Date'])
+            except Exception:
+                pred_x = np.arange(0, len(pred_df))
         else:
             pred_x = np.arange(0, len(pred_df))
 

@@ -26,32 +26,52 @@ def detect_extremes(df: pd.DataFrame, column: str, method: str, threshold_pct: f
     if df is None or column not in df.columns:
         return pd.Series(False, index=df.index if df is not None else [])
     
-    series = pd.to_numeric(df[column], errors='coerce').ffill().bfill()
+    series = pd.to_numeric(df[column], errors='coerce')
     
-    # Check if we have valid numeric values
-    if series.dropna().empty:
+    # Forward/backward fill NaN, but guard against all-NaN columns
+    series = series.ffill().bfill()
+    
+    # Check if we have valid numeric values after cleaning
+    valid = series.dropna()
+    if valid.empty or len(valid) < 2:
+        return pd.Series(False, index=df.index)
+    
+    # Guard against constant data (std == 0)
+    if valid.std() == 0:
         return pd.Series(False, index=df.index)
 
-    # 1. Adapt percentile to probability
+    # Adapt percentile to probability
     alpha = threshold_pct / 100.0
     
     if "Percentil" in method:
         # Simple percentile thresholding
-        limit = np.percentile(series.dropna(), threshold_pct)
+        limit = np.percentile(valid, threshold_pct)
         return series > limit
 
     elif "Z-Score" in method:
         # Standardize and check standard deviation threshold
-        # Map 95% -> 1.96, 99% -> 2.58, etc.
-        z_scores = np.abs(stats.zscore(series))
-        # Find critical z value for given two-tailed or one-tailed percentile
+        # Use nan_policy='omit' equivalent by working on clean data
+        mean_val = valid.mean()
+        std_val = valid.std()
+        
+        if std_val == 0 or np.isnan(std_val):
+            return pd.Series(False, index=df.index)
+        
+        z_scores = np.abs((series - mean_val) / std_val)
+        # Find critical z value for given percentile
         critical_z = stats.norm.ppf(alpha)
         return z_scores > critical_z
 
     elif "IQR" in method:
         # Interquartile Range method
-        q25, q75 = np.percentile(series.dropna(), [25, 75])
+        q25, q75 = np.percentile(valid, [25, 75])
         iqr = q75 - q25
+        
+        if iqr == 0:
+            # Fallback to percentile if IQR is zero
+            limit = np.percentile(valid, threshold_pct)
+            return series > limit
+        
         # Sensitivity adjustment: map threshold to multiplier
         # 95% threshold -> standard 1.5 * IQR. 99% -> 3.0 * IQR
         multiplier = 1.5 if threshold_pct <= 95 else 3.0
@@ -61,24 +81,24 @@ def detect_extremes(df: pd.DataFrame, column: str, method: str, threshold_pct: f
     elif "Gumbel" in method:
         # Fit Gumbel distribution (right-skewed extreme value)
         try:
-            params = stats.gumbel_r.fit(series.dropna())
+            params = stats.gumbel_r.fit(valid)
             # Find the threshold value corresponding to alpha probability
             limit = stats.gumbel_r.ppf(alpha, *params)
             return series > limit
         except Exception:
             # Fallback to percentile if fit fails
-            limit = np.percentile(series.dropna(), threshold_pct)
+            limit = np.percentile(valid, threshold_pct)
             return series > limit
 
     elif "Teoria de Valores Extremos" in method or "EVT" in method:
         # Fit Generalized Extreme Value (GEV) distribution
         try:
-            params = stats.genextreme.fit(series.dropna())
+            params = stats.genextreme.fit(valid)
             limit = stats.genextreme.ppf(alpha, *params)
             return series > limit
         except Exception:
             # Fallback to Gumbel/percentile if fit fails
-            limit = np.percentile(series.dropna(), threshold_pct)
+            limit = np.percentile(valid, threshold_pct)
             return series > limit
 
     elif "Todos" in method:
@@ -93,5 +113,5 @@ def detect_extremes(df: pd.DataFrame, column: str, method: str, threshold_pct: f
 
     else:
         # Fallback
-        limit = np.percentile(series.dropna(), threshold_pct)
+        limit = np.percentile(valid, threshold_pct)
         return series > limit
