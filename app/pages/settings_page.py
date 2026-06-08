@@ -7,7 +7,7 @@ import os
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from app.theme import Colors, Fonts, Spacing
-from app.components import SectionHeader, ActionButton, LabeledOptionMenu, StatusBadge
+from app.components import SectionHeader, ActionButton, LabeledOptionMenu
 
 
 class SettingsPage(ctk.CTkFrame):

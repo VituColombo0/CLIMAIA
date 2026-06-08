@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import customtkinter as ctk
-from datetime import datetime
+
 from app.theme import Colors, Fonts, Spacing
 from app.components import (SectionHeader, ActionButton, LabeledEntry,
                              LabeledOptionMenu, ConsoleBox, StatusBadge)
@@ -194,7 +194,7 @@ class ForecastPage(ctk.CTkFrame):
         self.target_var = LabeledOptionMenu(
             right_inner, label="Variável Alvo",
             values=["Velocidade do Vento", "Temperatura",
-                    "Radiação Solar", "Todas"],
+                    "Radiação Solar"],
             default="Velocidade do Vento")
         self.target_var.pack(fill="x")
 
@@ -295,7 +295,7 @@ class ForecastPage(ctk.CTkFrame):
         if state.get("analysis_config"):
             analyzed_vars = state["analysis_config"].get("variables", [])
             if analyzed_vars:
-                options = analyzed_vars + ["Todas"]
+                options = analyzed_vars
                 self.target_var.option.configure(values=options)
                 self.target_var.option.set(analyzed_vars[0])
 
@@ -350,7 +350,7 @@ class ForecastPage(ctk.CTkFrame):
         variables = config.get("variables", [])
         
         if target == "Todas":
-            target = variables[0] if variables else df.columns[1]  # Fallback
+            target = variables[0] if variables else df.columns[1]  # Fallback just in case
 
         # Check date column
         date_col = state.get("csv_date_col", "Auto-detectar")
@@ -396,9 +396,10 @@ class ForecastPage(ctk.CTkFrame):
             self.app.after(0, on_success)
 
         except Exception as e:
+            err_msg = str(e)
             def on_failure():
                 self.model_badge.set_status("error", "FALHA")
-                self.console.log(f"\n❌ ERRO durante o treinamento: {e}")
+                self.console.log(f"\n❌ ERRO durante o treinamento: {err_msg}")
                 self.console.log("━" * 50)
             self.app.after(0, on_failure)
 
@@ -504,6 +505,12 @@ class ForecastPage(ctk.CTkFrame):
         else:
             target = state.get("forecast_target")
             forecaster = state.get("forecaster")
+            
+            if ui_target != target and ui_target != "Todas":
+                self.console.log(f"❌ ERRO: O modelo atual foi treinado para '{target}'.")
+                self.console.log(f"   → Treine um novo modelo para '{ui_target}' ou selecione a variável correta.")
+                self.forecast_status.set_status("error", "VARIÁVEL INVÁLIDA")
+                return
 
         model_type = state.get("model_type", "N/A")
         date_col = state.get("forecast_date_col")
@@ -540,7 +547,7 @@ class ForecastPage(ctk.CTkFrame):
             # Output stats
             mean_pred = pred_df['Prediction'].mean()
             max_pred = pred_df['Prediction'].max()
-            self.console.log(f"\n📊 Previsão gerada com sucesso:")
+            self.console.log("\n📊 Previsão gerada com sucesso:")
             self.console.log(f"  - Pontos previstos: {len(pred_df)}")
             self.console.log(f"  - Valor médio previsto: {mean_pred:.2f}")
             self.console.log(f"  - Valor máximo previsto: {max_pred:.2f}")
@@ -743,7 +750,7 @@ class ForecastPage(ctk.CTkFrame):
         self.check_labels["model"].configure(text="✅")
 
         # Update target variable dropdown with available vars
-        var_options = available_vars + ["Todas"]
+        var_options = available_vars
         self.target_var.option.configure(values=var_options)
         self.target_var.option.set(first_var)
 
